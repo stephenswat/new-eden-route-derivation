@@ -112,7 +112,7 @@ void universe_add_system(struct universe *u, int id, char *name, double x, doubl
     int seq_id = u->system_count++;
     struct system *s = &(u->systems[seq_id]);
 
-    strcpy(s->name, name);
+    s->name = strdup(name);
     s->id = id;
     s->seq_id = seq_id;
 
@@ -125,7 +125,7 @@ struct entity *universe_add_entity(struct universe *u, int system, int id, enum 
     struct system *s = universe_get_system(u, system);
     struct entity *e = &(s->entities[s->entity_count++]);
 
-    strcpy(e->name, name);
+    e->name = strdup(name);
     e->id = id;
     e->seq_id = u->entity_count++;
     u->entities[e->seq_id] = e;

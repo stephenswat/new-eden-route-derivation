@@ -133,7 +133,6 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                 prev[v] = tmp;
                 cost[v] = cur_cost;
                 step[v] = step[tmp] + 1;
-                if (v == dst->seq_id) printf("%d %d %d %d\n", step[v], step[tmp], v, tmp );
             }
         }
 

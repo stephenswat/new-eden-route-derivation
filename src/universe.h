@@ -23,7 +23,7 @@ struct route {
 struct entity {
     int id, seq_id;
     double x, y, z;
-    char name[128];
+    char *name;
 
     enum entity_type type;
     int group_id;
@@ -34,7 +34,7 @@ struct entity {
 struct system {
     int id, seq_id;
     double x, y, z;
-    char name[128];
+    char *name;
 
     int entity_count;
     struct entity entities[LIMIT_ENTITIES_PER_SYSTEM];
