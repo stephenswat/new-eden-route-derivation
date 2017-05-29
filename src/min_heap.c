@@ -43,7 +43,7 @@ static void min_heap_ify(struct min_heap *heap, int index) {
     struct min_heap_element *elem, *parent;
     int parent_index;
 
-    do {
+    while (index > 0) {
         parent_index = PARENT_ENTRY(index);
 
         elem = heap->array + index;
@@ -55,7 +55,7 @@ static void min_heap_ify(struct min_heap *heap, int index) {
         } else {
             break;
         }
-    } while (index > 0);
+    }
 }
 
 bool min_heap_decrease(struct min_heap *heap, double priority, int value) {
