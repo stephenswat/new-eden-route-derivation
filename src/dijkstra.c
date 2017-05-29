@@ -4,6 +4,7 @@
 #include <math.h>
 
 #include "main.h"
+#include "min_heap.h"
 #include "universe.h"
 
 #define FINE_BENCHMARKING 1
@@ -14,8 +15,10 @@
 #define AU_TO_M 149597870700.0
 #define LY_TO_M 9460730472580800.0
 
+#if FINE_BENCHMARKING == 1
 static struct timespec fgt1, fgt2, fgt3, fgt4, fgt5;
 static long fga1, fga2, fga3, fga4;
+#endif
 
 double entity_distance(struct entity *a, struct entity *b) {
     if (a->system != b->system) return INFINITY;
@@ -60,65 +63,55 @@ double get_time(double distance, double v_wrp) {
     return cruise_time + t_accel + t_decel;
 }
 
-inline void update_arrays(double *dist, int *prev, int *step, int u, int v, double cost) {
-    double alt = dist[u] + cost;
-
-    if (alt < dist[v]) {
-        dist[v] = alt;
-        prev[v] = u;
-        step[v] = step[u] + 1;
-    }
-}
-
 struct route *dijkstra(struct universe *u, struct entity *src, struct entity *dst, struct trip *parameters) {
+    static double gate_cost = 10.0;
+    static struct min_heap queue;
+
     static int prev[LIMIT_ENTITIES];
     static int step[LIMIT_ENTITIES];
-    static double dist[LIMIT_ENTITIES];
-    static char visited[LIMIT_ENTITIES];
+    static double cost[LIMIT_ENTITIES];
 
-    static double gate_cost = 10.0;
+    int count = u->entity_count;
 
-    double distance;
+    min_heap_init(&queue, count);
+
+    double distance, cur_cost;
 
     double jump_range = parameters->jump_range;
     double warp_speed = parameters->warp_speed;
     double align_time = parameters->align_time;
 
     for (int i = 0; i < u->entity_count; i++) {
-        prev[i] = -1;
-        dist[i] = INFINITY;
-        step[i] = 0;
-        visited[i] = 0;
+        if (i == src->seq_id) {
+            min_heap_insert(&queue, 0, i);
+            prev[i] = -1;
+            step[i] = 0;
+            cost[i] = 0;
+        } else {
+            min_heap_insert(&queue, INFINITY, i);
+            prev[i] = -1;
+            step[i] = -1;
+            cost[i] = INFINITY;
+        }
+
     }
 
-    int count = u->entity_count;
-
-    int tmp;
+    int tmp, v;
     int loops = 0;
 
     struct system *sys;
     struct entity *ent;
-
-    dist[src->seq_id] = 0;
 
     for (int remaining = count; remaining > 0; remaining--, loops++) {
         #if FINE_BENCHMARKING == 1
         clock_gettime(CLOCK_MONOTONIC, &fgt1);
         #endif
 
-        tmp = 0;
+        tmp = min_heap_extract(&queue);
 
-        for (int i = 0; i < count; i++) {
-            if (!visited[i] && (dist[i] < dist[tmp] || visited[tmp])) {
-                tmp = i;
-            }
-        }
+        // printf("%d %f (%d/%d)\n", tmp, cost[tmp], src->seq_id, dst->seq_id);
 
-        if (visited[tmp] || tmp == dst->seq_id || dist[tmp] == INFINITY) {
-            break;
-        }
-
-        visited[tmp] = 1;
+        if (tmp == dst->seq_id || isinf(cost[tmp])) break;
 
         #if FINE_BENCHMARKING == 1
         clock_gettime(CLOCK_MONOTONIC, &fgt2);
@@ -133,7 +126,17 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             // if (!sys->entities[i].destination && sys != dst->system) continue;
             if (tmp == sys->entities[i].seq_id) continue;
 
-            update_arrays(dist, prev, step, tmp, sys->entities[i].seq_id, align_time + get_time(entity_distance(ent, &sys->entities[i]), warp_speed));
+            v = sys->entities[i].seq_id;
+            cur_cost = cost[tmp] + align_time + get_time(entity_distance(ent, &sys->entities[i]), warp_speed);
+
+            // printf("Try %d -> %f\n", v, cur_cost);
+            if (min_heap_decrease(&queue, cur_cost, v)) {
+                // printf("Yay1\n");
+                prev[v] = tmp;
+                cost[v] = cur_cost;
+                step[v] = step[tmp] + 1;
+                if (v == dst->seq_id) printf("%d %d %d %d\n", step[v], step[tmp], v, tmp );
+            }
         }
 
         #if FINE_BENCHMARKING == 1
@@ -143,7 +146,17 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
         // Gate set
         if (ent->destination) {
-            update_arrays(dist, prev, step, tmp, ent->destination->seq_id, gate_cost);
+            v = ent->destination->seq_id;
+            cur_cost = cost[tmp] + gate_cost;
+
+            // printf("Try %d -> %f\n", v, cur_cost);
+
+            if (min_heap_decrease(&queue, cur_cost, v)) {
+                // printf("Yay2\n");
+                prev[v] = tmp;
+                cost[v] = cur_cost;
+                step[v] = step[tmp] + 1;
+            }
         }
 
         #if FINE_BENCHMARKING == 1
@@ -160,7 +173,17 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
                 if (distance < jump_range) {
                     for (int j = 0; j < u->systems[i].entity_count; j++) {
-                        update_arrays(dist, prev, step, tmp, u->systems[i].entities[j].seq_id, 60 * (distance + 1));
+                        v = u->systems[i].entities[j].seq_id;
+                        cur_cost = cost[tmp] + 60 * (distance + 1);
+
+                        // printf("Try %d -> %f\n", v, cur_cost);
+
+                        if (min_heap_decrease(&queue, cur_cost, v)) {
+                            // printf("Yay3\n");
+                            prev[v] = tmp;
+                            cost[v] = cur_cost;
+                            step[v] = step[tmp] + 1;
+                        }
                     }
                 }
             }
@@ -180,12 +203,14 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
     route->loops = loops;
     route->length = step[dst->seq_id] + 1;
-    route->cost = dist[dst->seq_id];
+    route->cost = cost[dst->seq_id];
     route->points = malloc(route->length * sizeof(struct entity *));
 
     for (int c = dst->seq_id, i = route->length - 1; c >= 0; c = prev[c], i--) {
         route->points[i] = u->entities[c];
     }
+
+    min_heap_destroy(&queue);
 
     return route;
 }
