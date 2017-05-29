@@ -97,7 +97,7 @@ void universe_route(struct universe *u, int src_id, int dst_id, struct trip *par
 
     route = dijkstra(u, src, dst, param);
 
-    fprintf(stderr, "Distance: %lf (%d steps)\n", route->cost, route->length);
+    fprintf(stderr, "Travel time: %u minutes, %02u seconds (%d steps)\n", ((int) route->cost) / 60, ((int) route->cost) % 60, route->length);
     fprintf(stderr, "Route: ");
 
     for (int i = 0; i < route->length; i++) {
