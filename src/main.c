@@ -170,7 +170,7 @@ void load_stargates(FILE *f, struct universe *u) {
         }
 
         src_e->destination=dst_e;
-        sprintf(src_e->name, "%s - %s gate", src_e->system->name, dst_e->system->name);
+        asprintf(&src_e->name, "%s - %s gate", src_e->system->name, dst_e->system->name);
     } while (res != EOF);
 }
 
