@@ -31,3 +31,14 @@
 # Debug files
 *.dSYM/
 *.su
+
+# Dependency files
+*.d
+
+# Temporarily ignored
+CHANGELOG
+NERD*
+*.csv
+data/
+benchmarks/
+benchmark.sh

@@ -68,7 +68,7 @@ struct entity *universe_get_entity_or_default(struct universe *u, int id) {
     struct entity *ent = NULL;
 
     if (id >= 30000000 && id < 40000000) {
-        printf("Warning: ID %d is a system. ", id);
+        fprintf(stderr, "Warning: ID %d is a system. ", id);
         sys = universe_get_system(u, id);
 
         for (int i = 0; i < sys->entity_count; i++) {
@@ -80,7 +80,7 @@ struct entity *universe_get_entity_or_default(struct universe *u, int id) {
             }
         }
 
-        printf("Assuming %s %s.\n", (ent->type == STATION ? "station" : "celestial"), ent->name);
+        fprintf(stderr, "Assuming %s %s.\n", (ent->type == STATION ? "station" : "celestial"), ent->name);
     } else {
         ent = universe_get_entity(u, id);
     }
@@ -88,23 +88,24 @@ struct entity *universe_get_entity_or_default(struct universe *u, int id) {
     return ent;
 }
 
-void universe_route(struct universe *u, int src_id, int dst_id) {
+void universe_route(struct universe *u, int src_id, int dst_id, struct trip *param) {
     struct entity *src = universe_get_entity_or_default(u, src_id);
     struct entity *dst = universe_get_entity_or_default(u, dst_id);
+    struct route *route;
 
-    printf("Routing from %s to %s...\n", src->name, dst->name);
+    fprintf(stderr, "Routing from %s to %s...\n", src->name, dst->name);
 
-    dijkstra(u, src, dst, NULL);
-}
+    route = dijkstra(u, src, dst, param);
 
-double entity_distance(struct entity *a, struct entity *b) {
-    if (a->system != b->system) return INFINITY;
+    fprintf(stderr, "Distance: %lf (%d steps)\n", route->cost, route->length);
+    fprintf(stderr, "Route: ");
 
-    double dx = a->x - b->x;
-    double dy = a->y - b->y;
-    double dz = a->z - b->z;
+    for (int i = 0; i < route->length; i++) {
+        if (i > 0 && route->points[i]->system != route->points[i - 1]->system) continue;
+        fprintf(stderr, "%s%s", route->points[i]->name, (i == route->length -1 ? "" : ", "));
+    }
 
-    return sqrt(dx * dx + dy * dy + dz * dz);
+    fprintf(stderr, ".\n");
 }
 
 void universe_add_system(struct universe *u, int id, char *name, double x, double y, double z) {

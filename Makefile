@@ -1,6 +1,7 @@
-CFLAGS=-Wall -Wextra -std=gnu11 -Og -g -Isrc/ -MMD
-LDLIBS+=-lreadline -lm
-SRC=$(wildcard src/*.c)
+CC = gcc
+CFLAGS = -mtune=native -Wall -Wextra -std=gnu11 -O2 -Wno-missing-field-initializers -Isrc/ -MMD
+LDLIBS += -lreadline -lm
+SRC = $(wildcard src/*.c)
 
 .PHONY: clean
 
