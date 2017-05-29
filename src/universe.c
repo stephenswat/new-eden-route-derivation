@@ -101,7 +101,6 @@ void universe_route(struct universe *u, int src_id, int dst_id, struct trip *par
     fprintf(stderr, "Route: ");
 
     for (int i = 0; i < route->length; i++) {
-        if (i > 0 && route->points[i]->system != route->points[i - 1]->system) continue;
         fprintf(stderr, "%s%s", route->points[i]->name, (i == route->length -1 ? "" : ", "));
     }
 
