@@ -7,18 +7,14 @@
 #include "min_heap.h"
 #include "universe.h"
 
-#define FINE_BENCHMARKING 1
-
 #define likely(x)       __builtin_expect((x),1)
 #define unlikely(x)     __builtin_expect((x),0)
 
 #define AU_TO_M 149597870700.0
 #define LY_TO_M 9460730472580800.0
 
-#if FINE_BENCHMARKING == 1
-static struct timespec fgt1, fgt2, fgt3, fgt4, fgt5;
-static long fga1, fga2, fga3, fga4;
-#endif
+static struct timespec mbt[6];
+static long mba[6] = {0};
 
 double entity_distance(struct entity *a, struct entity *b) {
     if (a->system != b->system) return INFINITY;
@@ -95,7 +91,6 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             step[i] = -1;
             cost[i] = INFINITY;
         }
-
     }
 
     int tmp, v;
@@ -105,18 +100,19 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     struct entity *ent;
 
     for (int remaining = count; remaining > 0; remaining--, loops++) {
-        #if FINE_BENCHMARKING == 1
-        clock_gettime(CLOCK_MONOTONIC, &fgt1);
-        #endif
+        if (verbose) {
+            clock_gettime(CLOCK_MONOTONIC, &mbt[1]);
+            mba[0] += time_diff(&mbt[0], &mbt[1]);
+        }
 
         tmp = min_heap_extract(&queue);
 
         if (tmp == dst->seq_id || isinf(cost[tmp])) break;
 
-        #if FINE_BENCHMARKING == 1
-        clock_gettime(CLOCK_MONOTONIC, &fgt2);
-        fga1 += time_diff(&fgt1, &fgt2);
-        #endif
+        if (verbose) {
+            clock_gettime(CLOCK_MONOTONIC, &mbt[2]);
+            mba[1] += time_diff(&mbt[1], &mbt[2]);
+        }
 
         // System set
         ent = u->entities[tmp];
@@ -136,10 +132,10 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
         }
 
-        #if FINE_BENCHMARKING == 1
-        clock_gettime(CLOCK_MONOTONIC, &fgt3);
-        fga2 += time_diff(&fgt2, &fgt3);
-        #endif
+        if (verbose) {
+            clock_gettime(CLOCK_MONOTONIC, &mbt[3]);
+            mba[2] += time_diff(&mbt[2], &mbt[3]);
+        }
 
         // Gate set
         if (ent->destination) {
@@ -153,10 +149,10 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
         }
 
-        #if FINE_BENCHMARKING == 1
-        clock_gettime(CLOCK_MONOTONIC, &fgt4);
-        fga3 += time_diff(&fgt3, &fgt4);
-        #endif
+        if (verbose) {
+            clock_gettime(CLOCK_MONOTONIC, &mbt[4]);
+            mba[3] += time_diff(&mbt[3], &mbt[4]);
+        }
 
         // Jump set
         if (!isnan(jump_range)) {
@@ -183,17 +179,17 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
         }
 
-        #if FINE_BENCHMARKING == 1
-        clock_gettime(CLOCK_MONOTONIC, &fgt5);
-        fga4 += time_diff(&fgt4, &fgt5);
-        #endif
+        if (verbose) {
+            clock_gettime(CLOCK_MONOTONIC, &mbt[5]);
+            mba[4] += time_diff(&mbt[4], &mbt[5]);
+        }
     }
 
     struct route *route = malloc(sizeof(struct route));
 
-    #if FINE_BENCHMARKING == 1
-    fprintf(stderr, "%lu %lu %lu %lu\n", fga1, fga2, fga3, fga4);
-    #endif
+    if (verbose) {
+        fprintf(stderr, "%lu %lu %lu %lu\n", mba[1], mba[2], mba[3], mba[4]);
+    }
 
     route->loops = loops;
     route->length = step[dst->seq_id] + 1;
