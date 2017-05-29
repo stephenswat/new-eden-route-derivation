@@ -197,7 +197,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     route->cost = cost[dst->seq_id];
     route->points = calloc(route->length, sizeof(struct entity *));
 
-    for (int c = dst->seq_id, i = route->length - 1; c != src->seq_id && c != -1 && i >= 0; c = prev[c], i--) {
+    for (int c = dst->seq_id, i = route->length - 1; i >= 0; c = prev[c], i--) {
         route->points[i] = u->entities[c];
     }
 
