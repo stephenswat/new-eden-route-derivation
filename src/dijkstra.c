@@ -16,7 +16,7 @@
 static struct timespec mbt[6];
 static long mba[6] = {0};
 
-double entity_distance(struct entity *a, struct entity *b) {
+inline double __attribute__((always_inline)) entity_distance(struct entity *a, struct entity *b) {
     if (a->system != b->system) return INFINITY;
 
     double dx = a->x - b->x;
@@ -26,12 +26,12 @@ double entity_distance(struct entity *a, struct entity *b) {
     return sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-double system_distance(struct system *a, struct system *b) {
+inline double __attribute__((always_inline)) system_distance(struct system *a, struct system *b) {
     double dx = a->x - b->x;
     double dy = a->y - b->y;
     double dz = a->z - b->z;
 
-    return sqrt(dx * dx + dy * dy + dz * dz);
+    return dx * dx + dy * dy + dz * dz;
 }
 
 double get_time(double distance, double v_wrp) {
@@ -76,6 +76,8 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     double jump_range = parameters->jump_range;
     double warp_speed = parameters->warp_speed;
     double align_time = parameters->align_time;
+
+    double sqjr = pow(jump_range * LY_TO_M, 2.0);
 
     for (int i = 0; i < u->entity_count; i++) {
         if (!u->entities[i]->destination && u->entities[i]->seq_id != src->seq_id && u->entities[i]->seq_id != dst->seq_id) continue;
@@ -157,12 +159,11 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         // Jump set
         if (!isnan(jump_range)) {
             for (int i = 0; i < u->system_count; i++) {
-                if (sys->id == u->systems[i].id) continue;
+                distance = system_distance(sys, &u->systems[i]);
 
-                distance = system_distance(sys, &u->systems[i]) / LY_TO_M;
-
-                if (distance < jump_range) {
+                if (distance <= sqjr && sys->id != u->systems[i].id) {
                     jsys = u->systems + i;
+                    distance = sqrt(distance) / LY_TO_M;
                     for (int j = 0; j < jsys->entity_count; j++) {
                         if (!jsys->entities[j].destination && jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id) continue;
 
