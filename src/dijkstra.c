@@ -16,6 +16,17 @@
 static struct timespec mbt[6];
 static long mba[6] = {0};
 
+enum measurement_point {
+    _S = 0, START = 1, SYSTEM_SET = 2, GATE_SET = 3, JUMP_SET = 4, END = 5
+};
+
+static void update_timers(enum measurement_point p) {
+    if (verbose) {
+        clock_gettime(CLOCK_MONOTONIC, &mbt[p]);
+        mba[p - 1] += time_diff(&mbt[p - 1], &mbt[p]);
+    }
+}
+
 inline double __attribute__((always_inline)) entity_distance(struct entity *a, struct entity *b) {
     if (a->system != b->system) return INFINITY;
 
@@ -102,19 +113,13 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     struct entity *ent;
 
     for (int remaining = count; remaining > 0; remaining--, loops++) {
-        if (verbose) {
-            clock_gettime(CLOCK_MONOTONIC, &mbt[1]);
-            mba[0] += time_diff(&mbt[0], &mbt[1]);
-        }
+        update_timers(START);
 
         tmp = min_heap_extract(&queue);
 
         if (tmp == dst->seq_id || isinf(cost[tmp])) break;
 
-        if (verbose) {
-            clock_gettime(CLOCK_MONOTONIC, &mbt[2]);
-            mba[1] += time_diff(&mbt[1], &mbt[2]);
-        }
+        update_timers(SYSTEM_SET);
 
         // System set
         ent = u->entities[tmp];
@@ -134,10 +139,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
         }
 
-        if (verbose) {
-            clock_gettime(CLOCK_MONOTONIC, &mbt[3]);
-            mba[2] += time_diff(&mbt[2], &mbt[3]);
-        }
+        update_timers(GATE_SET);
 
         // Gate set
         if (ent->destination) {
@@ -151,10 +153,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
         }
 
-        if (verbose) {
-            clock_gettime(CLOCK_MONOTONIC, &mbt[4]);
-            mba[3] += time_diff(&mbt[3], &mbt[4]);
-        }
+        update_timers(JUMP_SET);
 
         // Jump set
         if (!isnan(jump_range)) {
@@ -180,10 +179,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
         }
 
-        if (verbose) {
-            clock_gettime(CLOCK_MONOTONIC, &mbt[5]);
-            mba[4] += time_diff(&mbt[4], &mbt[5]);
-        }
+        update_timers(END);
     }
 
     struct route *route = malloc(sizeof(struct route));
