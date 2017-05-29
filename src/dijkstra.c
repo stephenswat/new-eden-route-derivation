@@ -1,14 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <math.h>
 
+#include "main.h"
 #include "universe.h"
+
+#define FINE_BENCHMARKING 1
 
 #define likely(x)       __builtin_expect((x),1)
 #define unlikely(x)     __builtin_expect((x),0)
 
 #define AU_TO_M 149597870700.0
 #define LY_TO_M 9460730472580800.0
+
+static struct timespec fgt1, fgt2, fgt3, fgt4, fgt5;
+static long fga1, fga2, fga3, fga4;
 
 double entity_distance(struct entity *a, struct entity *b) {
     if (a->system != b->system) return INFINITY;
@@ -95,35 +102,54 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     dist[src->seq_id] = 0;
 
     for (int remaining = count; remaining > 0; remaining--, loops++) {
-        tmp = -1;
+        #if FINE_BENCHMARKING == 1
+        clock_gettime(CLOCK_MONOTONIC, &fgt1);
+        #endif
+
+        tmp = 0;
 
         for (int i = 0; i < count; i++) {
-            if (!visited[i] && (tmp == -1 || dist[i] < dist[tmp])) {
+            if (!visited[i] && (dist[i] < dist[tmp] || visited[tmp])) {
                 tmp = i;
             }
         }
 
-        if (tmp == -1 || tmp == dst->seq_id || dist[tmp] == INFINITY) {
+        if (visited[tmp] || tmp == dst->seq_id || dist[tmp] == INFINITY) {
             break;
         }
 
         visited[tmp] = 1;
+
+        #if FINE_BENCHMARKING == 1
+        clock_gettime(CLOCK_MONOTONIC, &fgt2);
+        fga1 += time_diff(&fgt1, &fgt2);
+        #endif
 
         // System set
         ent = u->entities[tmp];
         sys = ent->system;
 
         for (int i = 0; i < sys->entity_count; i++) {
-            // if (sys->entities[i].type == CELESTIAL && sys != dst->system) continue;
+            // if (!sys->entities[i].destination && sys != dst->system) continue;
             if (tmp == sys->entities[i].seq_id) continue;
 
             update_arrays(dist, prev, step, tmp, sys->entities[i].seq_id, align_time + get_time(entity_distance(ent, &sys->entities[i]), warp_speed));
         }
 
+        #if FINE_BENCHMARKING == 1
+        clock_gettime(CLOCK_MONOTONIC, &fgt3);
+        fga2 += time_diff(&fgt2, &fgt3);
+        #endif
+
         // Gate set
         if (ent->destination) {
             update_arrays(dist, prev, step, tmp, ent->destination->seq_id, gate_cost);
         }
+
+        #if FINE_BENCHMARKING == 1
+        clock_gettime(CLOCK_MONOTONIC, &fgt4);
+        fga3 += time_diff(&fgt3, &fgt4);
+        #endif
 
         // Jump set
         if (!isnan(jump_range)) {
@@ -139,9 +165,18 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                 }
             }
         }
+
+        #if FINE_BENCHMARKING == 1
+        clock_gettime(CLOCK_MONOTONIC, &fgt5);
+        fga4 += time_diff(&fgt4, &fgt5);
+        #endif
     }
 
     struct route *route = malloc(sizeof(struct route));
+
+    #if FINE_BENCHMARKING == 1
+    fprintf(stderr, "%lu %lu %lu %lu\n", fga1, fga2, fga3, fga4);
+    #endif
 
     route->loops = loops;
     route->length = step[dst->seq_id] + 1;

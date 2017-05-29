@@ -50,9 +50,9 @@ static struct argp_option options[] = {
     { 0 }
 };
 
-long time_diff(void) {
-    return ((timer_end.tv_sec * 1000000000 + timer_end.tv_nsec) -
-            (timer_start.tv_sec * 1000000000 + timer_start.tv_nsec));
+long time_diff(struct timespec *start, struct timespec *end) {
+    return ((end->tv_sec * 1000000000 + end->tv_nsec) -
+            (start->tv_sec * 1000000000 + start->tv_nsec));
 }
 
 static error_t parse_opt (int key, char *arg, struct argp_state *state) {
@@ -190,7 +190,7 @@ void run_batch_experiment(FILE *f) {
         route = dijkstra(universe, src_e, dst_e, &parameters);
         clock_gettime(CLOCK_MONOTONIC, &timer_end);
 
-        printf("%d %d %011ld %d %d\n", src, dst, time_diff(), route->length, route->loops);
+        printf("%d %d %011ld %d %d\n", src, dst, time_diff(&timer_start, &timer_end), route->length, route->loops);
 
         free(route->points);
         free(route);
@@ -279,7 +279,7 @@ int main(int argc, char **argv) {
     clock_gettime(CLOCK_MONOTONIC, &timer_end);
 
     fprintf(stderr, "Loaded New Eden (%d systems, %d entities) in %.3f seconds...\n",
-        universe->system_count, universe->entity_count, time_diff() / 1E9
+        universe->system_count, universe->entity_count, time_diff(&timer_start, &timer_end) / 1E9
     );
 
     if (arguments.src != 0 && arguments.dst != 0) {
