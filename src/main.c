@@ -11,7 +11,6 @@
 #include "universe.h"
 #include "dijkstra.h"
 
-int print_timer = 0;
 int verbose = 0;
 
 struct universe *universe;
