@@ -82,6 +82,8 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     double align_time = parameters->align_time;
 
     for (int i = 0; i < u->entity_count; i++) {
+        if (!u->entities[i]->destination && u->entities[i]->seq_id != src->seq_id && u->entities[i]->seq_id != dst->seq_id) continue;
+
         if (i == src->seq_id) {
             min_heap_insert(&queue, 0, i);
             prev[i] = -1;
@@ -99,7 +101,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     int tmp, v;
     int loops = 0;
 
-    struct system *sys;
+    struct system *sys, *jsys;
     struct entity *ent;
 
     for (int remaining = count; remaining > 0; remaining--, loops++) {
@@ -108,8 +110,6 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         #endif
 
         tmp = min_heap_extract(&queue);
-
-        // printf("%d %f (%d/%d)\n", tmp, cost[tmp], src->seq_id, dst->seq_id);
 
         if (tmp == dst->seq_id || isinf(cost[tmp])) break;
 
@@ -123,15 +123,13 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         sys = ent->system;
 
         for (int i = 0; i < sys->entity_count; i++) {
-            // if (!sys->entities[i].destination && sys != dst->system) continue;
+            if (!sys->entities[i].destination && sys->entities[i].seq_id != src->seq_id && sys->entities[i].seq_id != dst->seq_id) continue;
             if (tmp == sys->entities[i].seq_id) continue;
 
             v = sys->entities[i].seq_id;
             cur_cost = cost[tmp] + align_time + get_time(entity_distance(ent, &sys->entities[i]), warp_speed);
 
-            // printf("Try %d -> %f\n", v, cur_cost);
             if (min_heap_decrease(&queue, cur_cost, v)) {
-                // printf("Yay1\n");
                 prev[v] = tmp;
                 cost[v] = cur_cost;
                 step[v] = step[tmp] + 1;
@@ -149,10 +147,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             v = ent->destination->seq_id;
             cur_cost = cost[tmp] + gate_cost;
 
-            // printf("Try %d -> %f\n", v, cur_cost);
-
             if (min_heap_decrease(&queue, cur_cost, v)) {
-                // printf("Yay2\n");
                 prev[v] = tmp;
                 cost[v] = cur_cost;
                 step[v] = step[tmp] + 1;
@@ -172,14 +167,14 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                 distance = system_distance(sys, &u->systems[i]) / LY_TO_M;
 
                 if (distance < jump_range) {
-                    for (int j = 0; j < u->systems[i].entity_count; j++) {
-                        v = u->systems[i].entities[j].seq_id;
+                    jsys = u->systems + i;
+                    for (int j = 0; j < jsys->entity_count; j++) {
+                        if (!jsys->entities[j].destination && jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id) continue;
+
+                        v = jsys->entities[j].seq_id;
                         cur_cost = cost[tmp] + 60 * (distance + 1);
 
-                        // printf("Try %d -> %f\n", v, cur_cost);
-
                         if (min_heap_decrease(&queue, cur_cost, v)) {
-                            // printf("Yay3\n");
                             prev[v] = tmp;
                             cost[v] = cur_cost;
                             step[v] = step[tmp] + 1;

@@ -1,6 +1,6 @@
 #pragma once
 
-#define VERSION "0.0.3"
+#define VERSION "0.0.4"
 
 extern int print_timer;
 
