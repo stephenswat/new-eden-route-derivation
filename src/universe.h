@@ -21,19 +21,19 @@ struct route {
 };
 
 struct entity {
+    float x, y, z;
     int id, seq_id;
-    double x, y, z;
     char *name;
 
     enum entity_type type;
     int group_id;
     struct system *system;
     struct entity *destination;
-};
+} __attribute__ ((aligned(64)));
 
 struct system {
+    float x, y, z;
     int id, seq_id;
-    double x, y, z;
     char *name;
 
     int entity_count;

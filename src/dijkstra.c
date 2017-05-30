@@ -27,20 +27,20 @@ static void update_timers(enum measurement_point p) {
     }
 }
 
-inline double __attribute__((always_inline)) entity_distance(struct entity *a, struct entity *b) {
+inline float __attribute__((always_inline)) entity_distance(struct entity *a, struct entity *b) {
     if (a->system != b->system) return INFINITY;
 
-    double dx = a->x - b->x;
-    double dy = a->y - b->y;
-    double dz = a->z - b->z;
+    float dx = a->x - b->x;
+    float dy = a->y - b->y;
+    float dz = a->z - b->z;
 
     return sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-inline double __attribute__((always_inline)) system_distance(struct system *a, struct system *b) {
-    double dx = a->x - b->x;
-    double dy = a->y - b->y;
-    double dz = a->z - b->z;
+inline float __attribute__((always_inline)) system_distance(struct system *a, struct system *b) {
+    float dx = a->x - b->x;
+    float dy = a->y - b->y;
+    float dz = a->z - b->z;
 
     return dx * dx + dy * dy + dz * dz;
 }
