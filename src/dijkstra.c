@@ -183,21 +183,21 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         // Jump set
         if (!isnan(jump_range)) {
             for (int i = 0; i < u->system_count; i++) {
-                if (jump_distance[i] <= sqjr && sys->id != u->systems[i].id) {
-                    jsys = u->systems + i;
-                    distance = sqrt(jump_distance[i]) / LY_TO_M;
+                if (jump_distance[i] > sqjr || sys->id == u->systems[i].id) continue;
 
-                    for (int j = 0; j < jsys->entity_count; j++) {
-                        if (!jsys->entities[j].destination && jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id) continue;
+                jsys = u->systems + i;
+                distance = sqrt(jump_distance[i]) / LY_TO_M;
 
-                        v = jsys->entities[j].seq_id;
-                        cur_cost = cost[tmp] + 60 * (distance + 1);
+                for (int j = 0; j < jsys->entity_count; j++) {
+                    if (!jsys->entities[j].destination && jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id) continue;
 
-                        if (min_heap_decrease(&queue, cur_cost, v)) {
-                            prev[v] = tmp;
-                            cost[v] = cur_cost;
-                            step[v] = step[tmp] + 1;
-                        }
+                    v = jsys->entities[j].seq_id;
+                    cur_cost = cost[tmp] + 60 * (distance + 1);
+
+                    if (min_heap_decrease(&queue, cur_cost, v)) {
+                        prev[v] = tmp;
+                        cost[v] = cur_cost;
+                        step[v] = step[tmp] + 1;
                     }
                 }
             }
