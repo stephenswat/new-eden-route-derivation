@@ -31,12 +31,12 @@ static void min_heap_swap(struct min_heap *heap, int ia, int ib) {
     a = heap->array + ia;
     b = heap->array + ib;
 
-    heap->map[a->value] = ib;
-    heap->map[b->value] = ia;
-
     tmp = *a;
     *a = *b;
     *b = tmp;
+
+    heap->map[b->value] = ib;
+    heap->map[a->value] = ia;
 }
 
 static void min_heap_ify(struct min_heap *heap, int index) {
@@ -61,13 +61,7 @@ static void min_heap_ify(struct min_heap *heap, int index) {
 bool min_heap_decrease(struct min_heap *heap, double priority, int value) {
     int index = heap->map[value];
 
-    // printf("%d, %f -> %f\n", index, heap->array[index].priority, priority);
-
-    if (index == -1) {
-        printf("This should never happen!\n");
-    }
-
-    if (priority < heap->array[index].priority) {
+    if (priority < heap->array[index].priority && index != -1) {
         heap->array[index].priority = priority;
 
         min_heap_ify(heap, index);
@@ -96,9 +90,11 @@ int min_heap_extract(struct min_heap *heap) {
     struct min_heap_element *elem, *child_left, *child_right, *child_smallest;
     int rv = heap->array[0].value, index, child_index;
 
+    heap->map[heap->array[0].value] = -1;
     elem = heap->array + --heap->occupied;
     heap->array[0].priority = elem->priority;
     heap->array[0].value = elem->value;
+    heap->map[heap->array[0].value] = 0;
 
     index = 0;
 
