@@ -8,16 +8,25 @@ enum entity_type {
     CELESTIAL, STATION, STARGATE
 };
 
+enum movement_type {
+    JUMP, GATE, WARP, STRT
+};
+
 struct trip {
     double jump_range;
     double warp_speed;
     double align_time;
 };
 
+struct waypoint {
+    struct entity *entity;
+    enum movement_type type;
+};
+
 struct route {
     int length, loops;
     double cost;
-    struct entity **points;
+    struct waypoint points[];
 };
 
 struct entity {

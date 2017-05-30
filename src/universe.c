@@ -6,6 +6,8 @@
 #include "universe.h"
 #include "dijkstra.h"
 
+static char *movement_type_str[4] = { [JUMP] = "JUMP", [GATE] = "GATE", [WARP] = "WARP", [STRT] = "STRT" };
+
 struct system *universe_get_system(struct universe *u, int id) {
     int low = 0, mid, high = u->system_count - 1;
 
@@ -98,13 +100,11 @@ void universe_route(struct universe *u, int src_id, int dst_id, struct trip *par
     route = dijkstra(u, src, dst, param);
 
     fprintf(stderr, "Travel time: %u minutes, %02u seconds (%d steps)\n", ((int) route->cost) / 60, ((int) route->cost) % 60, route->length);
-    fprintf(stderr, "Route: ");
+    fprintf(stderr, "Route: \n");
 
     for (int i = 0; i < route->length; i++) {
-        fprintf(stderr, "%s%s", route->points[i]->name, (i == route->length -1 ? "" : ", "));
+        fprintf(stderr, "    %s: %s\n", movement_type_str[route->points[i].type], route->points[i].entity->name);
     }
-
-    fprintf(stderr, ".\n");
 }
 
 void universe_add_system(struct universe *u, int id, char *name, double x, double y, double z) {

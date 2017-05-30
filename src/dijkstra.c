@@ -78,6 +78,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     static int step[LIMIT_ENTITIES];
     static double cost[LIMIT_ENTITIES];
     static float jump_distance[LIMIT_SYSTEMS];
+    static enum movement_type type[LIMIT_ENTITIES];
 
     int count = u->entity_count;
 
@@ -99,6 +100,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             prev[i] = -1;
             step[i] = 0;
             cost[i] = 0;
+            type[i] = STRT;
         } else {
             min_heap_insert(&queue, INFINITY, i);
             prev[i] = -1;
@@ -149,6 +151,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                 prev[v] = tmp;
                 cost[v] = cur_cost;
                 step[v] = step[tmp] + 1;
+                type[v] = WARP;
                 if (verbose >= 2) fprintf(stderr, "Cost for %d decreased to %lf.\n", v, cur_cost);
             } else {
                 if (verbose >= 2) fprintf(stderr, "Discarding due to no decrease in heap time.\n");
@@ -166,6 +169,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                 prev[v] = tmp;
                 cost[v] = cur_cost;
                 step[v] = step[tmp] + 1;
+                type[v] = GATE;
             }
         }
 
@@ -198,6 +202,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                         prev[v] = tmp;
                         cost[v] = cur_cost;
                         step[v] = step[tmp] + 1;
+                        type[v] = JUMP;
                     }
                 }
             }
@@ -206,7 +211,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         update_timers(END);
     }
 
-    struct route *route = malloc(sizeof(struct route));
+    struct route *route = malloc(sizeof(struct route) + (step[dst->seq_id] + 1) * sizeof(struct waypoint));
 
     if (verbose >= 1) {
         fprintf(stderr, "%lu %lu %lu %lu %lu\n", mba[START], mba[SYSTEM_SET], mba[GATE_SET], mba[JUMP_RANGE], mba[JUMP_SET]);
@@ -215,10 +220,10 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     route->loops = loops;
     route->length = step[dst->seq_id] + 1;
     route->cost = cost[dst->seq_id];
-    route->points = calloc(route->length, sizeof(struct entity *));
 
     for (int c = dst->seq_id, i = route->length - 1; i >= 0; c = prev[c], i--) {
-        route->points[i] = u->entities[c];
+        route->points[i].type = type[c];
+        route->points[i].entity = u->entities[c];
     }
 
     min_heap_destroy(&queue);
