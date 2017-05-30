@@ -17,7 +17,7 @@ static struct timespec mbt[6];
 static long mba[6] = {0};
 
 enum measurement_point {
-    _S = 0, START = 1, SYSTEM_SET = 2, GATE_SET = 3, JUMP_SET = 4, END = 5
+    _S, START, SYSTEM_SET, GATE_SET, JUMP_RANGE, JUMP_SET, END
 };
 
 static void update_timers(enum measurement_point p) {
@@ -77,6 +77,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     static int prev[LIMIT_ENTITIES];
     static int step[LIMIT_ENTITIES];
     static double cost[LIMIT_ENTITIES];
+    static float jump_distance[LIMIT_SYSTEMS];
 
     int count = u->entity_count;
 
@@ -168,16 +169,24 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
         }
 
+        update_timers(JUMP_RANGE);
+
+        // Jump range
+        if (!isnan(jump_range)) {
+            for (int i = 0; i < u->system_count; i++) {
+                jump_distance[i] = system_distance(sys, &u->systems[i]);
+            }
+        }
+
         update_timers(JUMP_SET);
 
         // Jump set
         if (!isnan(jump_range)) {
             for (int i = 0; i < u->system_count; i++) {
-                distance = system_distance(sys, &u->systems[i]);
-
-                if (distance <= sqjr && sys->id != u->systems[i].id) {
+                if (jump_distance[i] <= sqjr && sys->id != u->systems[i].id) {
                     jsys = u->systems + i;
-                    distance = sqrt(distance) / LY_TO_M;
+                    distance = sqrt(jump_distance[i]) / LY_TO_M;
+
                     for (int j = 0; j < jsys->entity_count; j++) {
                         if (!jsys->entities[j].destination && jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id) continue;
 
@@ -200,7 +209,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     struct route *route = malloc(sizeof(struct route));
 
     if (verbose >= 1) {
-        fprintf(stderr, "%lu %lu %lu %lu\n", mba[1], mba[2], mba[3], mba[4]);
+        fprintf(stderr, "%lu %lu %lu %lu %lu\n", mba[START], mba[SYSTEM_SET], mba[GATE_SET], mba[JUMP_RANGE], mba[JUMP_SET]);
     }
 
     route->loops = loops;
