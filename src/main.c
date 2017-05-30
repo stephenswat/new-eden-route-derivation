@@ -34,7 +34,7 @@ static struct trip parameters = { .jump_range = NAN, .warp_speed = 3, .align_tim
 static struct argp_option options[] = {
     {"quiet", 'q', 0, 0, "Don't produce any output", 0 },
     {"silent", 's', 0, OPTION_ALIAS },
-    {"verbose", 'v', 0, 0, "Produce some extra output", 0 },
+    {"verbose", 'v', "level", OPTION_ARG_OPTIONAL , "Produce some extra output", 0 },
 
     {"route", 'R', "origin:destination", 0, "Route between two entity IDs", 1},
     {"nothing", 'N', 0, 0, "Uninteractively exit without doing routing", 1},
@@ -59,7 +59,7 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
 
     switch (key) {
         case 'v':
-            verbose = 1;
+            verbose = arg ? atoi(arg) : 1;
             break;
         case 'q':
         case 's':
@@ -268,7 +268,7 @@ int main(int argc, char **argv) {
 
     argp_parse (&argp, argc, argv, 0, 0, &arguments);
 
-    if (verbose) {
+    if (verbose >= 1) {
         print_additional_information();
     }
 

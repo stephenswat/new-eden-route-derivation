@@ -21,7 +21,7 @@ enum measurement_point {
 };
 
 static void update_timers(enum measurement_point p) {
-    if (verbose) {
+    if (verbose >= 1) {
         clock_gettime(CLOCK_MONOTONIC, &mbt[p]);
         mba[p - 1] += time_diff(&mbt[p - 1], &mbt[p]);
     }
@@ -184,7 +184,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
     struct route *route = malloc(sizeof(struct route));
 
-    if (verbose) {
+    if (verbose >= 1) {
         fprintf(stderr, "%lu %lu %lu %lu\n", mba[1], mba[2], mba[3], mba[4]);
     }
 
