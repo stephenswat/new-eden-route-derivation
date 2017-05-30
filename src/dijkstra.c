@@ -117,17 +117,29 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
         tmp = min_heap_extract(&queue);
 
+        if (verbose >= 2) fprintf(stderr, "New entity %d (cost %lf)\n", tmp, cost[tmp]);
         if (tmp == dst->seq_id || isinf(cost[tmp])) break;
 
         update_timers(SYSTEM_SET);
 
-        // System set
         ent = u->entities[tmp];
         sys = ent->system;
 
+        if (verbose >= 2) fprintf(stderr, "Current entity: %s (%s)\n", ent->name, sys->name);
+
+        // System set
         for (int i = 0; i < sys->entity_count; i++) {
-            if (!sys->entities[i].destination && sys->entities[i].seq_id != src->seq_id && sys->entities[i].seq_id != dst->seq_id) continue;
-            if (tmp == sys->entities[i].seq_id) continue;
+            if (verbose >= 2) fprintf(stderr, "Considering warp to: %s\n", sys->entities[i].name);
+
+            if (!sys->entities[i].destination && sys->entities[i].seq_id != src->seq_id && sys->entities[i].seq_id != dst->seq_id) {
+                if (verbose >= 2) fprintf(stderr, "Discarding due to lack of destination.\n");
+                continue;
+            }
+
+            if (tmp == sys->entities[i].seq_id) {
+                if (verbose >= 2) fprintf(stderr, "Discarding due to warp to self.\n");
+                continue;
+            }
 
             v = sys->entities[i].seq_id;
             cur_cost = cost[tmp] + align_time + get_time(entity_distance(ent, &sys->entities[i]), warp_speed);
@@ -136,6 +148,9 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                 prev[v] = tmp;
                 cost[v] = cur_cost;
                 step[v] = step[tmp] + 1;
+                if (verbose >= 2) fprintf(stderr, "Cost for %d decreased to %lf.\n", v, cur_cost);
+            } else {
+                if (verbose >= 2) fprintf(stderr, "Discarding due to no decrease in heap time.\n");
             }
         }
 
