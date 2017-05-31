@@ -72,13 +72,13 @@ double get_time(double distance, double v_wrp) {
 }
 
 struct route *dijkstra(struct universe *u, struct entity *src, struct entity *dst, struct trip *parameters) {
-    static struct min_heap queue;
+    struct min_heap queue;
 
-    static int prev[LIMIT_ENTITIES];
-    static int step[LIMIT_ENTITIES];
-    static double cost[LIMIT_ENTITIES];
-    static float jump_distance[LIMIT_SYSTEMS];
-    static enum movement_type type[LIMIT_ENTITIES];
+    int *prev = malloc(LIMIT_ENTITIES * sizeof(int));
+    int *step = malloc(LIMIT_ENTITIES * sizeof(int));
+    double *cost = malloc(LIMIT_ENTITIES * sizeof(double));
+    enum movement_type *type = malloc(LIMIT_ENTITIES * sizeof(enum movement_type));
+    float *jump_distance = malloc(LIMIT_SYSTEMS * sizeof(float));
 
     int count = u->entity_count;
 
