@@ -44,6 +44,7 @@ static struct argp_option options[] = {
     {"jump", 2000, "value", 0, "Set jump drive range in lightyears", 2},
     {"align", 2001, "value", 0, "Set align time in seconds", 2},
     {"warp", 2002, "value", 0, "Set warp speed in astronomical units per second", 2},
+    {"gate", 2003, "value", 0, "Set the per-gate time in seconds (negative to disable)", 2},
 
     {"version", 3000, 0, 0, "Print the version of the program", 3},
     { 0 }
@@ -85,6 +86,9 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
             break;
         case 2002:
             parameters.warp_speed = atof(arg);
+            break;
+        case 2003:
+            parameters.gate_cost = atof(arg);
             break;
         case 3000:
             fprintf(stderr, "NERD-" VERSION "\n");

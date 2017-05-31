@@ -71,7 +71,6 @@ double get_time(double distance, double v_wrp) {
 }
 
 struct route *dijkstra(struct universe *u, struct entity *src, struct entity *dst, struct trip *parameters) {
-    static double gate_cost = 10.0;
     static struct min_heap queue;
 
     static int prev[LIMIT_ENTITIES];
@@ -89,6 +88,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     double jump_range = parameters->jump_range;
     double warp_speed = parameters->warp_speed;
     double align_time = parameters->align_time;
+    double gate_cost = parameters->gate_cost;
 
     double sqjr = pow(jump_range * LY_TO_M, 2.0);
 
@@ -161,7 +161,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         update_timers(GATE_SET);
 
         // Gate set
-        if (ent->destination) {
+        if (ent->destination && gate_cost >= 0.0) {
             v = ent->destination->seq_id;
             cur_cost = cost[tmp] + gate_cost;
 

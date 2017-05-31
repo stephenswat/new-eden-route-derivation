@@ -16,6 +16,7 @@ struct trip {
     double jump_range;
     double warp_speed;
     double align_time;
+    double gate_cost;
 };
 
 struct waypoint {
