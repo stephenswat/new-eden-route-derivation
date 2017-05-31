@@ -17,8 +17,8 @@
 #define LY_TO_M 9460730472580800.0
 
 enum measurement_point {
-    MB_UNUSED = 0, MB_START = 1, MB_SYSTEM_SET = 2, MB_GATE_SET = 3,
-    MB_JUMP_RANGE = 4, MB_JUMP_SET = 5, MB_END = 6, MB_MAX = 7
+    MB_UNUSED, MB_START, MB_SYSTEM_SET, MB_GATE_SET,
+    MB_JUMP_SET, MB_END, MB_MAX
 };
 
 static struct timespec mbt[MB_MAX];
@@ -71,11 +71,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     int *step = malloc(LIMIT_ENTITIES * sizeof(int));
     double *cost = malloc(LIMIT_ENTITIES * sizeof(double));
     enum movement_type *type = malloc(LIMIT_ENTITIES * sizeof(enum movement_type));
-    float *jump_distance = malloc(LIMIT_SYSTEMS * sizeof(float));
 
-    float *sys_x = malloc(LIMIT_SYSTEMS * sizeof(float));
-    float *sys_y = malloc(LIMIT_SYSTEMS * sizeof(float));
-    float *sys_z = malloc(LIMIT_SYSTEMS * sizeof(float));
     float *sys_c = malloc(4 * LIMIT_SYSTEMS * sizeof(float));
 
     struct min_heap queue;
@@ -85,13 +81,9 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     double sqjr = pow(parameters->jump_range * LY_TO_M, 2.0);
 
     for (int i = 0; i < u->system_count; i++) {
-        sys_x[i] = u->systems[i].pos[0];
-        sys_y[i] = u->systems[i].pos[1];
-        sys_z[i] = u->systems[i].pos[2];
-
-        sys_c[i * 4] = sys_x[i];
-        sys_c[i * 4 + 1] = sys_y[i];
-        sys_c[i * 4 + 2] = sys_z[i];
+        sys_c[i * 4 + 0] = u->systems[i].pos[0];
+        sys_c[i * 4 + 1] = u->systems[i].pos[1];
+        sys_c[i * 4 + 2] = u->systems[i].pos[2];
         sys_c[i * 4 + 3] = 0;
     }
 
@@ -170,31 +162,22 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
         }
 
-        update_timers(MB_JUMP_RANGE);
+        update_timers(MB_JUMP_SET);
 
-        // Jump range
+        // Jump set
         __m128 tmp_coord;
 
         if (!isnan(parameters->jump_range)) {
             for (int i = 0; i < u->system_count; i++) {
-                tmp_coord = _mm_load_ps(&sys_c[i * 4]);
-                tmp_coord = _mm_sub_ps(sys->pos, tmp_coord);
+                tmp_coord = _mm_sub_ps(sys->pos, _mm_load_ps(&sys_c[i * 4]));
                 tmp_coord = _mm_mul_ps(tmp_coord, tmp_coord);
                 tmp_coord = _mm_hadd_ps(tmp_coord, tmp_coord);
                 tmp_coord = _mm_hadd_ps(tmp_coord, tmp_coord);
-                jump_distance[i] = tmp_coord[0];
-            }
-        }
 
-        update_timers(MB_JUMP_SET);
-
-        // Jump set
-        if (!isnan(parameters->jump_range)) {
-            for (int i = 0; i < u->system_count; i++) {
-                if (jump_distance[i] > sqjr || sys->id == u->systems[i].id) continue;
+                if (tmp_coord[0] > sqjr || sys->id == u->systems[i].id) continue;
 
                 jsys = u->systems + i;
-                distance = sqrt(jump_distance[i]) / LY_TO_M;
+                distance = sqrt(tmp_coord[0]) / LY_TO_M;
 
                 for (int j = 0; j < jsys->entity_count; j++) {
                     if (!jsys->entities[j].destination && jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id) continue;
@@ -218,9 +201,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     struct route *route = malloc(sizeof(struct route) + (step[dst->seq_id] + 1) * sizeof(struct waypoint));
 
     if (verbose >= 1) {
-        fprintf(stderr,"%lu %lu %lu %lu %lu\n", mba[MB_START],
-            mba[MB_SYSTEM_SET], mba[MB_GATE_SET], mba[MB_JUMP_RANGE], mba[MB_JUMP_SET]
-        );
+        fprintf(stderr,"%lu %lu %lu %lu\n", mba[MB_START], mba[MB_SYSTEM_SET], mba[MB_GATE_SET], mba[MB_JUMP_SET]);
     }
 
     route->loops = loops;
