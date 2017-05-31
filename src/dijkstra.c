@@ -218,5 +218,11 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
     min_heap_destroy(&queue);
 
+    free(prev);
+    free(step);
+    free(cost);
+    free(type);
+    free(sys_c);
+
     return route;
 }
