@@ -105,6 +105,8 @@ void universe_route(struct universe *u, int src_id, int dst_id, struct trip *par
     for (int i = 0; i < route->length; i++) {
         fprintf(stderr, "    %s: %s\n", movement_type_str[route->points[i].type], route->points[i].entity->name);
     }
+
+    free(route);
 }
 
 void universe_add_system(struct universe *u, int id, char *name, double x, double y, double z) {
@@ -147,7 +149,17 @@ struct entity *universe_add_entity(struct universe *u, int system, int id, enum 
 }
 
 struct universe *universe_init() {
-    struct universe *universe = calloc(1, sizeof(struct universe));
+    return calloc(1, sizeof(struct universe));
+}
 
-    return universe;
+void universe_free(struct universe *u) {
+    for (int i = 0; i < u->entity_count; i++) {
+        if (u->entities[i]->name) free(u->entities[i]->name);
+    }
+
+    for (int i = 0; i < u->system_count; i++) {
+        if (u->systems[i].name) free(u->systems[i].name);
+    }
+
+    free(u);
 }

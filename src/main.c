@@ -173,6 +173,11 @@ void load_stargates(FILE *f, struct universe *u) {
         }
 
         src_e->destination=dst_e;
+
+        if (src_e->name) {
+            free(src_e->name);
+        }
+
         asprintf(&src_e->name, "%s - %s gate", src_e->system->name, dst_e->system->name);
     } while (res != EOF);
 }
@@ -195,7 +200,6 @@ void run_batch_experiment(FILE *f) {
 
         printf("%d %d %011ld %d %d\n", src, dst, time_diff(&timer_start, &timer_end), route->length, route->loops);
 
-        free(route->points);
         free(route);
     } while (res != EOF);
 }
@@ -270,7 +274,7 @@ int main(int argc, char **argv) {
     struct arguments arguments = { .batch = NULL, .src = 0, .dst = 0, .gen_type = 0 };
     universe = universe_init();
 
-    argp_parse (&argp, argc, argv, 0, 0, &arguments);
+    argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
     if (verbose >= 1) {
         print_additional_information();
@@ -295,7 +299,7 @@ int main(int argc, char **argv) {
         run_user_interface();
     }
 
-    free(universe);
+    universe_free(universe);
 
     return 0;
 }

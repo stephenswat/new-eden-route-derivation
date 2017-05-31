@@ -13,12 +13,13 @@
 #define AU_TO_M 149597870700.0
 #define LY_TO_M 9460730472580800.0
 
-static struct timespec mbt[6];
-static long mba[6] = {0};
-
 enum measurement_point {
-    _S, START, SYSTEM_SET, GATE_SET, JUMP_RANGE, JUMP_SET, END
+    MB_UNUSED = 0, MB_START = 1, MB_SYSTEM_SET = 2, MB_GATE_SET = 3,
+    MB_JUMP_RANGE = 4, MB_JUMP_SET = 5, MB_END = 6, MB_MAX = 7
 };
+
+static struct timespec mbt[MB_MAX];
+static long mba[MB_MAX] = {0};
 
 static void update_timers(enum measurement_point p) {
     if (verbose >= 1) {
@@ -116,14 +117,14 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     struct entity *ent;
 
     for (int remaining = count; remaining > 0; remaining--, loops++) {
-        update_timers(START);
+        update_timers(MB_START);
 
         tmp = min_heap_extract(&queue);
 
         if (verbose >= 2) fprintf(stderr, "New entity %d (cost %lf)\n", tmp, cost[tmp]);
         if (tmp == dst->seq_id || isinf(cost[tmp])) break;
 
-        update_timers(SYSTEM_SET);
+        update_timers(MB_SYSTEM_SET);
 
         ent = u->entities[tmp];
         sys = ent->system;
@@ -158,7 +159,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
         }
 
-        update_timers(GATE_SET);
+        update_timers(MB_GATE_SET);
 
         // Gate set
         if (ent->destination && gate_cost >= 0.0) {
@@ -173,7 +174,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
         }
 
-        update_timers(JUMP_RANGE);
+        update_timers(MB_JUMP_RANGE);
 
         // Jump range
         if (!isnan(jump_range)) {
@@ -182,7 +183,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
         }
 
-        update_timers(JUMP_SET);
+        update_timers(MB_JUMP_SET);
 
         // Jump set
         if (!isnan(jump_range)) {
@@ -208,13 +209,15 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
         }
 
-        update_timers(END);
+        update_timers(MB_END);
     }
 
     struct route *route = malloc(sizeof(struct route) + (step[dst->seq_id] + 1) * sizeof(struct waypoint));
 
     if (verbose >= 1) {
-        fprintf(stderr, "%lu %lu %lu %lu %lu\n", mba[START], mba[SYSTEM_SET], mba[GATE_SET], mba[JUMP_RANGE], mba[JUMP_SET]);
+        fprintf(stderr,"%lu %lu %lu %lu %lu\n", mba[MB_START],
+            mba[MB_SYSTEM_SET], mba[MB_GATE_SET], mba[MB_JUMP_RANGE], mba[MB_JUMP_SET]
+        );
     }
 
     route->loops = loops;

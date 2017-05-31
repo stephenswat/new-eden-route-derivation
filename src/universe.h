@@ -58,6 +58,7 @@ struct universe {
 };
 
 struct universe *universe_init();
+void universe_free(struct universe *);
 void universe_add_system(struct universe *, int, char *, double, double, double);
 struct entity *universe_add_entity(struct universe *, int, int, enum entity_type, char *, double, double, double, struct entity *);
 void universe_route(struct universe *, int, int, struct trip *);
