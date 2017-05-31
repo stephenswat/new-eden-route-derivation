@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <assert.h>
 #include <argp.h>
 
 #include <readline/readline.h>
@@ -112,15 +113,100 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
 
 static struct argp argp = { options, parse_opt, args_doc, NULL };
 
-void load_systems_and_entities(FILE *f, struct universe *u) {
+struct universe *load_systems_and_entities(FILE *f) {
     int res;
     struct entity *ent;
+    struct universe *u;
 
-    int id, type_id, group_id, system_id, region_id;
+    unsigned int id, type_id, group_id, system_id, region_id;
     char solar_system_str[128], constellation_id[128], region_str[128];
     double x, y, z;
     char name[128], security[128], buffer[512];
 
+    fgets(buffer, 512, f);
+
+    unsigned int system_count = 0, entity_count = 0, system_max = 0;
+
+    fgets(buffer, 512, f);
+
+    do {
+        res = fscanf(f, "%d,%*d,%*d,%*[^,],%*[^,],%[^,],%*[^,],%*f,%*f,%*f,%*[^,],%*[^,],%*[^,],%*[^,],%*[^,\n]\n", &id, region_str);
+
+        if (id >= 30000000 && id < 40000000) {
+            region_id = atoi(region_str);
+
+            if (region_id == 10000019 || region_id == 10000017 || region_id == 10000004) {
+                continue;
+            }
+
+            system_count++;
+
+            if (id > system_max) system_max = id;
+        }
+    } while (res != EOF);
+
+    int system_map[(system_max - 30000000) + 1];
+    unsigned int per_system_entities[system_count + 1];
+    system_count = 0;
+
+    for (unsigned int i = 0; i < ((system_max - 30000000) + 1); i++) {
+        system_map[i] = -1;
+    }
+
+    fseek(f, 0, SEEK_SET);
+    fgets(buffer, 512, f);
+
+    unsigned int entity_type_max[10] = {0};
+    unsigned int sid, cat;
+
+    do {
+        res = fscanf(f, "%d,%*d,%*d,%[^,],%*[^,],%[^,],%*[^,],%*f,%*f,%*f,%*[^,],%*[^,],%*[^,],%*[^,],%*[^,\n]\n",
+            &id, solar_system_str, region_str
+        );
+
+        if (id >= 30000000 && id < 70000000) {
+            region_id = atoi(region_str);
+
+            if (region_id == 10000019 || region_id == 10000017 || region_id == 10000004) {
+                continue;
+            }
+        }
+
+        if (strcmp("None", solar_system_str) == 0) {
+            system_id = 0;
+        } else {
+            system_id = atoi(solar_system_str);
+        }
+
+        if (id >= 30000000 && id < 40000000) {
+            if (system_map[id - 30000000] == -1) {
+                system_map[id - 30000000] = system_count++;
+            }
+        } else if (id >= 40000000 && id < 70000000) {
+            entity_count++;
+            assert(system_map[system_id - 30000000] != -1);
+            per_system_entities[system_map[system_id - 30000000]]++;
+        }
+
+        sid = id % 10000000;
+        cat = id / 10000000;
+
+        if (sid > entity_type_max[cat]) entity_type_max[cat] = sid;
+    } while (res != EOF);
+
+    u = universe_init(system_count, entity_count);
+
+    u->system_map = calloc(entity_type_max[3], sizeof(unsigned int));
+    u->celestial_map = calloc(entity_type_max[4], sizeof(unsigned int));
+    u->stargate_map = calloc(entity_type_max[5], sizeof(unsigned int));
+    u->station_map = calloc(entity_type_max[6], sizeof(unsigned int));
+
+    for (unsigned int i = 0; i < entity_type_max[3]; i++) u->system_map[i] = -1;
+    for (unsigned int i = 0; i < entity_type_max[4]; i++) u->celestial_map[i] = -1;
+    for (unsigned int i = 0; i < entity_type_max[5]; i++) u->stargate_map[i] = -1;
+    for (unsigned int i = 0; i < entity_type_max[6]; i++) u->station_map[i] = -1;
+
+    fseek(f, 0, SEEK_SET);
     fgets(buffer, 512, f);
 
     do {
@@ -143,7 +229,7 @@ void load_systems_and_entities(FILE *f, struct universe *u) {
         }
 
         if (id >= 30000000 && id < 40000000) {
-            universe_add_system(u, id, name, x, y, z);
+            universe_add_system(u, id, name, x, y, z, per_system_entities[system_map[id - 30000000]]);
         } else if (id >= 40000000 && id < 50000000) {
             ent = universe_add_entity(u, system_id, id, CELESTIAL, name, x, y, z, NULL);
             ent->group_id = group_id;
@@ -153,6 +239,8 @@ void load_systems_and_entities(FILE *f, struct universe *u) {
             ent = universe_add_entity(u, system_id, id, STATION, name, x, y, z, NULL);
         }
     } while (res != EOF);
+
+    return u;
 }
 
 void load_stargates(FILE *f, struct universe *u) {
@@ -272,7 +360,6 @@ void print_additional_information(void) {
 
 int main(int argc, char **argv) {
     struct arguments arguments = { .batch = NULL, .src = 0, .dst = 0, .gen_type = 0 };
-    universe = universe_init();
 
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
@@ -281,7 +368,7 @@ int main(int argc, char **argv) {
     }
 
     clock_gettime(CLOCK_MONOTONIC, &timer_start);
-    load_systems_and_entities(fopen(arguments.args[0], "r"), universe);
+    universe = load_systems_and_entities(fopen(arguments.args[0], "r"));
     load_stargates(fopen(arguments.args[1], "r"), universe);
     clock_gettime(CLOCK_MONOTONIC, &timer_end);
 

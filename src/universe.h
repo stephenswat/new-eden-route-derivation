@@ -54,13 +54,15 @@ struct system {
 
 struct universe {
     int system_count, entity_count, stargate_count;
-    struct system systems[LIMIT_SYSTEMS];
-    struct entity *entities[LIMIT_SYSTEMS * LIMIT_ENTITIES_PER_SYSTEM];
+    struct system *systems;
+    struct entity *entities, *last_entity;
+
+    int *system_map, *stargate_map, *celestial_map, *station_map;
 };
 
-struct universe *universe_init();
+struct universe *universe_init(unsigned int, unsigned int);
 void universe_free(struct universe *);
-void universe_add_system(struct universe *, int, char *, double, double, double);
+void universe_add_system(struct universe *, int, char *, double, double, double, unsigned int);
 struct entity *universe_add_entity(struct universe *, int, int, enum entity_type, char *, double, double, double, struct entity *);
 void universe_route(struct universe *, int, int, struct trip *);
 struct entity *universe_get_entity(struct universe *, int);

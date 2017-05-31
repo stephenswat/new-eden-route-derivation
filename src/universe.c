@@ -9,42 +9,25 @@
 static char *movement_type_str[4] = { [JUMP] = "JUMP", [GATE] = "GATE", [WARP] = "WARP", [STRT] = "STRT" };
 
 struct system *universe_get_system(struct universe *u, int id) {
-    int low = 0, mid, high = u->system_count - 1;
+    int index = u->system_map[id % 10000000];
 
-    while (low <= high) {
-        mid = (low + high) / 2;
-
-        if (u->systems[mid].id == id) {
-            return &u->systems[mid];
-        } else if (u->systems[mid].id < id) {
-            low = mid + 1;
-        } else {
-            high = mid - 1;
-        }
-    }
-
-    return NULL;
+    if (index == -1) return NULL;
+    return u->systems + index;
 }
 
 struct entity *universe_get_entity(struct universe *u, int id) {
-    int count = u->entity_count;
-    struct entity **start = u->entities;
+    int index = -1;
 
-    int low = 0, mid, high = count - 1;
-
-    while (low <= high) {
-        mid = (low + high) / 2;
-
-        if (start[mid]->id == id) {
-            return start[mid];
-        } else if (start[mid]->id < id) {
-            low = mid + 1;
-        } else {
-            high = mid - 1;
-        }
+    if (id >= 40000000 && id < 50000000) {
+        index = u->celestial_map[id % 10000000];
+    } else if (id >= 50000000 && id < 60000000) {
+        index = u->stargate_map[id % 10000000];
+    } else if (id >= 60000000 && id < 70000000) {
+        index = u->station_map[id % 10000000];
     }
 
-    return NULL;
+    if (index == -1) return NULL;
+    return u->entities + index;
 }
 
 struct entity *universe_get_entity_or_default(struct universe *u, int id) {
@@ -91,30 +74,42 @@ void universe_route(struct universe *u, int src_id, int dst_id, struct trip *par
     free(route);
 }
 
-void universe_add_system(struct universe *u, int id, char *name, double x, double y, double z) {
+void universe_add_system(struct universe *u, int id, char *name, double x, double y, double z, unsigned int entities) {
     int seq_id = u->system_count++;
     struct system *s = &(u->systems[seq_id]);
+    u->system_map[id % 10000000] = seq_id;
 
     s->name = strdup(name);
     s->id = id;
     s->seq_id = seq_id;
+    s->entity_count = 0;
 
     s->pos[0] = x;
     s->pos[1] = y;
     s->pos[2] = z;
     s->pos[3] = 0.0;
 
-    s->entities = calloc(LIMIT_ENTITIES_PER_SYSTEM, sizeof(struct entity));
+    s->entities = u->last_entity;
+    u->last_entity += entities;
 }
 
 struct entity *universe_add_entity(struct universe *u, int system, int id, enum entity_type type, char *name, double x, double y, double z, struct entity *destination) {
     struct system *s = universe_get_system(u, system);
-    struct entity *e = &(s->entities[s->entity_count++]);
+    struct entity *e = &s->entities[s->entity_count++];
+    int seq_id = e - u->entities;
+    u->entity_count++;
+
+    if (id >= 40000000 && id < 50000000) {
+        u->celestial_map[id % 10000000] = seq_id;
+    } else if (id >= 50000000 && id < 60000000) {
+        u->stargate_map[id % 10000000] = seq_id;
+    } else if (id >= 60000000 && id < 70000000) {
+        u->station_map[id % 10000000] = seq_id;
+    }
 
     e->name = strdup(name);
     e->id = id;
-    e->seq_id = u->entity_count++;
-    u->entities[e->seq_id] = e;
+    e->seq_id = seq_id;
 
     e->pos[0] = x;
     e->pos[1] = y;
@@ -129,13 +124,19 @@ struct entity *universe_add_entity(struct universe *u, int system, int id, enum 
     return e;
 }
 
-struct universe *universe_init() {
-    return calloc(1, sizeof(struct universe));
+struct universe *universe_init(unsigned int systems, unsigned int entities) {
+    struct universe *u = calloc(1, sizeof(struct universe));
+
+    u->entities = calloc(entities, sizeof(struct entity));
+    u->systems = calloc(systems, sizeof(struct system));
+    u->last_entity = u->entities;
+
+    return u;
 }
 
 void universe_free(struct universe *u) {
     for (int i = 0; i < u->entity_count; i++) {
-        if (u->entities[i]->name) free(u->entities[i]->name);
+        if (u->entities[i].name) free(u->entities[i].name);
     }
 
     for (int i = 0; i < u->system_count; i++) {

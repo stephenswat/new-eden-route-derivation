@@ -88,7 +88,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     }
 
     for (int i = 0; i < u->entity_count; i++) {
-        if (!u->entities[i]->destination && u->entities[i]->seq_id != src->seq_id && u->entities[i]->seq_id != dst->seq_id) continue;
+        if (!u->entities[i].destination && u->entities[i].seq_id != src->seq_id && u->entities[i].seq_id != dst->seq_id) continue;
 
         prev[i] = -1;
         type[i] = STRT;
@@ -114,7 +114,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
         update_timers(MB_SYSTEM_SET);
 
-        ent = u->entities[tmp];
+        ent = &u->entities[tmp];
         sys = ent->system;
 
         if (verbose >= 2) fprintf(stderr, "Current entity: %s (%s)\n", ent->name, sys->name);
@@ -213,7 +213,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
     for (int c = dst->seq_id, i = route->length - 1; i >= 0; c = prev[c], i--) {
         route->points[i].type = type[c];
-        route->points[i].entity = u->entities[c];
+        route->points[i].entity = &u->entities[c];
     }
 
     min_heap_destroy(&queue);
