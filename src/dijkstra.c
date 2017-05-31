@@ -73,11 +73,27 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     enum movement_type *type = malloc(LIMIT_ENTITIES * sizeof(enum movement_type));
     float *jump_distance = malloc(LIMIT_SYSTEMS * sizeof(float));
 
+    float *sys_x = malloc(LIMIT_SYSTEMS * sizeof(float));
+    float *sys_y = malloc(LIMIT_SYSTEMS * sizeof(float));
+    float *sys_z = malloc(LIMIT_SYSTEMS * sizeof(float));
+    float *sys_c = malloc(4 * LIMIT_SYSTEMS * sizeof(float));
+
     struct min_heap queue;
     min_heap_init(&queue, u->entity_count);
 
     double distance, cur_cost;
     double sqjr = pow(parameters->jump_range * LY_TO_M, 2.0);
+
+    for (int i = 0; i < u->system_count; i++) {
+        sys_x[i] = u->systems[i].pos[0];
+        sys_y[i] = u->systems[i].pos[1];
+        sys_z[i] = u->systems[i].pos[2];
+
+        sys_c[i * 4] = sys_x[i];
+        sys_c[i * 4 + 1] = sys_y[i];
+        sys_c[i * 4 + 2] = sys_z[i];
+        sys_c[i * 4 + 3] = 0;
+    }
 
     for (int i = 0; i < u->entity_count; i++) {
         if (!u->entities[i]->destination && u->entities[i]->seq_id != src->seq_id && u->entities[i]->seq_id != dst->seq_id) continue;
@@ -92,8 +108,6 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
     int tmp, v;
     int loops = 0;
-
-    __m128 sys_coord = {0}, tgt_coord = {0}, tmp_coord = {0};
 
     struct system *sys, *jsys;
     struct entity *ent;
@@ -159,19 +173,16 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         update_timers(MB_JUMP_RANGE);
 
         // Jump range
+        __m128 tmp_coord;
+
         if (!isnan(parameters->jump_range)) {
             for (int i = 0; i < u->system_count; i++) {
-                tmp_coord = _mm_sub_ps(sys->pos, u->systems[i].pos);
+                tmp_coord = _mm_load_ps(&sys_c[i * 4]);
+                tmp_coord = _mm_sub_ps(sys->pos, tmp_coord);
                 tmp_coord = _mm_mul_ps(tmp_coord, tmp_coord);
                 tmp_coord = _mm_hadd_ps(tmp_coord, tmp_coord);
                 tmp_coord = _mm_hadd_ps(tmp_coord, tmp_coord);
                 jump_distance[i] = tmp_coord[0];
-
-                // float dx = sys_x[sys->seq_id] - sys_x[i];
-                // float dy = sys_y[sys->seq_id] - sys_y[i];
-                // float dz = sys_z[sys->seq_id] - sys_z[i];
-                //
-                // jump_distance[i] = dx * dx + dy * dy + dz * dz;
             }
         }
 
