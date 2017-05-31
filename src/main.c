@@ -142,6 +142,8 @@ struct universe *load_systems_and_entities(FILE *f) {
             system_count++;
 
             if (id > system_max) system_max = id;
+        } else if (id >= 40000000) {
+            break;
         }
     } while (res != EOF);
 
