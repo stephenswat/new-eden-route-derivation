@@ -61,7 +61,7 @@ static void min_heap_ify(struct min_heap *heap, int index) {
 bool min_heap_decrease(struct min_heap *heap, double priority, int value) {
     int index = heap->map[value];
 
-    if (priority < heap->array[index].priority && index != -1) {
+    if (index != -1 && priority < heap->array[index].priority) {
         heap->array[index].priority = priority;
 
         min_heap_ify(heap, index);
