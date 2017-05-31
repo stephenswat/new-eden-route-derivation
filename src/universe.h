@@ -49,7 +49,7 @@ struct system {
     char *name;
 
     int entity_count;
-    struct entity *entities;
+    struct entity *entities, *gates;
 } __attribute__ ((aligned(64)));
 
 struct universe {

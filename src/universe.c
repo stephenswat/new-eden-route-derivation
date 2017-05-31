@@ -89,6 +89,7 @@ void universe_add_system(struct universe *u, int id, char *name, double x, doubl
     s->pos[2] = z;
     s->pos[3] = 0.0;
 
+    s->gates = NULL;
     s->entities = u->last_entity;
     u->last_entity += entities;
 }
@@ -98,13 +99,20 @@ struct entity *universe_add_entity(struct universe *u, int system, int id, enum 
     struct entity *e = &s->entities[s->entity_count++];
     int seq_id = e - u->entities;
     u->entity_count++;
+    int important = 0;
 
     if (id >= 40000000 && id < 50000000) {
         u->celestial_map[id % 10000000] = seq_id;
     } else if (id >= 50000000 && id < 60000000) {
+        important = 1;
         u->stargate_map[id % 10000000] = seq_id;
     } else if (id >= 60000000 && id < 70000000) {
+        important = 1;
         u->station_map[id % 10000000] = seq_id;
+    }
+
+    if (important && s->gates == NULL) {
+        s->gates = e;
     }
 
     e->name = strdup(name);

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <time.h>
 #include <math.h>
 
@@ -10,8 +11,14 @@
 #include "min_heap.h"
 #include "universe.h"
 
-#define likely(x)       __builtin_expect((x),1)
-#define unlikely(x)     __builtin_expect((x),0)
+#define IACA_SSC_MARK( MARK_ID )						\
+__asm__ __volatile__ (								\
+					  "\n\t  movl $"#MARK_ID", %%ebx"	\
+					  "\n\t  .byte 0x64, 0x67, 0x90"	\
+					  : : : "memory" );
+
+#define IACA_START {IACA_SSC_MARK(111)}
+#define IACA_END {IACA_SSC_MARK(222)}
 
 #define AU_TO_M 149597870700.0
 #define LY_TO_M 9460730472580800.0
@@ -166,9 +173,9 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
         // Jump set
         __m128 tmp_coord;
-        int system_final;
 
         if (!isnan(parameters->jump_range)) {
+            // #pragma omp parallel for private(tmp_coord, jsys, distance, v, cur_cost)
             for (int i = 0; i < u->system_count; i++) {
                 tmp_coord = _mm_sub_ps(sys->pos, _mm_load_ps(&sys_c[i * 4]));
                 tmp_coord = _mm_mul_ps(tmp_coord, tmp_coord);
@@ -180,14 +187,13 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                 jsys = u->systems + i;
                 distance = sqrt(tmp_coord[0]) / LY_TO_M;
 
-                system_final = (i == dst->system->seq_id) || (i == src->system->seq_id);
-
-                for (int j = 0; j < jsys->entity_count; j++) {
-                    if ((!system_final || (jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id)) && !jsys->entities[j].destination) continue;
+                for (int j = jsys->gates - jsys->entities; j < jsys->entity_count; j++) {
+                    if (!jsys->entities[j].destination && ((jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id))) continue;
 
                     v = jsys->entities[j].seq_id;
                     cur_cost = cost[tmp] + 60 * (distance + 1);
 
+                    // #pragma omp critical
                     if (min_heap_decrease(&queue, cur_cost, v)) {
                         prev[v] = tmp;
                         cost[v] = cur_cost;
