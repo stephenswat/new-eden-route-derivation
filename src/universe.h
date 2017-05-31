@@ -49,13 +49,12 @@ struct system {
     char *name;
 
     int entity_count;
-    struct entity entities[LIMIT_ENTITIES_PER_SYSTEM];
-};
+    struct entity *entities;
+} __attribute__ ((aligned(64)));
 
 struct universe {
     int system_count, entity_count, stargate_count;
     struct system systems[LIMIT_SYSTEMS];
-    struct entity **stargate_start;
     struct entity *entities[LIMIT_SYSTEMS * LIMIT_ENTITIES_PER_SYSTEM];
 };
 
@@ -65,5 +64,4 @@ void universe_add_system(struct universe *, int, char *, double, double, double)
 struct entity *universe_add_entity(struct universe *, int, int, enum entity_type, char *, double, double, double, struct entity *);
 void universe_route(struct universe *, int, int, struct trip *);
 struct entity *universe_get_entity(struct universe *, int);
-struct entity *universe_get_typed_entity(struct universe *, int, enum entity_type);
 struct entity *universe_get_entity_or_default(struct universe *, int);

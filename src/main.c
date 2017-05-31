@@ -165,8 +165,8 @@ void load_stargates(FILE *f, struct universe *u) {
     do {
         res = fscanf(f, "%d,%d\n", &src, &dst);
 
-        src_e = universe_get_typed_entity(u, src, STARGATE);
-        dst_e = universe_get_typed_entity(u, dst, STARGATE);
+        src_e = universe_get_entity(u, src);
+        dst_e = universe_get_entity(u, dst);
 
         if (src_e == NULL || dst_e == NULL) {
             continue;

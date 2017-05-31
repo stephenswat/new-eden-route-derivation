@@ -27,26 +27,8 @@ struct system *universe_get_system(struct universe *u, int id) {
 }
 
 struct entity *universe_get_entity(struct universe *u, int id) {
-    for (int i = 0; i < u->entity_count; i++) {
-        if (u->entities[i]->id == id) {
-            return u->entities[i];
-        }
-    }
-
-    return NULL;
-}
-
-struct entity *universe_get_typed_entity(struct universe *u, int id, enum entity_type type) {
     int count = u->entity_count;
     struct entity **start = u->entities;
-
-    switch (type) {
-        case STARGATE:
-            count = u->stargate_count;
-            start = u->stargate_start;
-        default:
-            break;
-    }
 
     int low = 0, mid, high = count - 1;
 
@@ -121,6 +103,8 @@ void universe_add_system(struct universe *u, int id, char *name, double x, doubl
     s->pos[1] = y;
     s->pos[2] = z;
     s->pos[3] = 0.0;
+
+    s->entities = calloc(LIMIT_ENTITIES_PER_SYSTEM, sizeof(struct entity));
 }
 
 struct entity *universe_add_entity(struct universe *u, int system, int id, enum entity_type type, char *name, double x, double y, double z, struct entity *destination) {
@@ -131,11 +115,6 @@ struct entity *universe_add_entity(struct universe *u, int system, int id, enum 
     e->id = id;
     e->seq_id = u->entity_count++;
     u->entities[e->seq_id] = e;
-
-    if (type == STARGATE) {
-        if (u->stargate_count == 0) u->stargate_start = &u->entities[e->seq_id];
-        u->stargate_count++;
-    }
 
     e->pos[0] = x;
     e->pos[1] = y;
