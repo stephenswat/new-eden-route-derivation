@@ -117,9 +117,10 @@ void universe_add_system(struct universe *u, int id, char *name, double x, doubl
     s->id = id;
     s->seq_id = seq_id;
 
-    s->x = x;
-    s->y = y;
-    s->z = z;
+    s->pos[0] = x;
+    s->pos[1] = y;
+    s->pos[2] = z;
+    s->pos[3] = 0.0;
 }
 
 struct entity *universe_add_entity(struct universe *u, int system, int id, enum entity_type type, char *name, double x, double y, double z, struct entity *destination) {
@@ -136,9 +137,10 @@ struct entity *universe_add_entity(struct universe *u, int system, int id, enum 
         u->stargate_count++;
     }
 
-    e->x = x;
-    e->y = y;
-    e->z = z;
+    e->pos[0] = x;
+    e->pos[1] = y;
+    e->pos[2] = z;
+    e->pos[3] = 0.0;
 
     e->system = s;
 

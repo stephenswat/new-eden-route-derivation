@@ -3,6 +3,9 @@
 #include <time.h>
 #include <math.h>
 
+#include <xmmintrin.h>
+#include <pmmintrin.h>
+
 #include "main.h"
 #include "min_heap.h"
 #include "universe.h"
@@ -31,19 +34,11 @@ static void update_timers(enum measurement_point p) {
 inline float __attribute__((always_inline)) entity_distance(struct entity *a, struct entity *b) {
     if (a->system != b->system) return INFINITY;
 
-    float dx = a->x - b->x;
-    float dy = a->y - b->y;
-    float dz = a->z - b->z;
+    float dx = a->pos[0] - b->pos[0];
+    float dy = a->pos[1] - b->pos[1];
+    float dz = a->pos[2] - b->pos[2];
 
     return sqrt(dx * dx + dy * dy + dz * dz);
-}
-
-inline float __attribute__((always_inline)) system_distance(struct system *a, struct system *b) {
-    float dx = a->x - b->x;
-    float dy = a->y - b->y;
-    float dz = a->z - b->z;
-
-    return dx * dx + dy * dy + dz * dz;
 }
 
 double get_time(double distance, double v_wrp) {
@@ -97,6 +92,8 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
     int tmp, v;
     int loops = 0;
+
+    __m128 sys_coord = {0}, tgt_coord = {0}, tmp_coord = {0};
 
     struct system *sys, *jsys;
     struct entity *ent;
@@ -164,7 +161,17 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         // Jump range
         if (!isnan(parameters->jump_range)) {
             for (int i = 0; i < u->system_count; i++) {
-                jump_distance[i] = system_distance(sys, &u->systems[i]);
+                tmp_coord = _mm_sub_ps(sys->pos, u->systems[i].pos);
+                tmp_coord = _mm_mul_ps(tmp_coord, tmp_coord);
+                tmp_coord = _mm_hadd_ps(tmp_coord, tmp_coord);
+                tmp_coord = _mm_hadd_ps(tmp_coord, tmp_coord);
+                jump_distance[i] = tmp_coord[0];
+
+                // float dx = sys_x[sys->seq_id] - sys_x[i];
+                // float dy = sys_y[sys->seq_id] - sys_y[i];
+                // float dz = sys_z[sys->seq_id] - sys_z[i];
+                //
+                // jump_distance[i] = dx * dx + dy * dy + dz * dz;
             }
         }
 

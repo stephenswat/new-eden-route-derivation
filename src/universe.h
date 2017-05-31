@@ -1,5 +1,7 @@
 #pragma once
 
+#include <xmmintrin.h>
+
 #define LIMIT_ENTITIES 500000
 #define LIMIT_ENTITIES_PER_SYSTEM 256
 #define LIMIT_SYSTEMS 9000
@@ -31,7 +33,7 @@ struct route {
 };
 
 struct entity {
-    float x, y, z;
+    __m128 pos;
     int id, seq_id;
     char *name;
 
@@ -42,7 +44,7 @@ struct entity {
 } __attribute__ ((aligned(64)));
 
 struct system {
-    float x, y, z;
+    __m128 pos;
     int id, seq_id;
     char *name;
 
