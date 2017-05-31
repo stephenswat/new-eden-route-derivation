@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -mtune=native -msse4.1 -Wall -Wextra -D _GNU_SOURCE -std=gnu11 -Og -g -Wno-missing-field-initializers -Isrc/ -MMD
+CFLAGS = -mtune=native -msse4.1 -Wall -Wextra -fopenmp -D _GNU_SOURCE -std=gnu11 -Og -g -Wno-missing-field-initializers -Isrc/ -MMD
+LDFLAGS += -fopenmp
 LDLIBS += -lreadline -lm
 SRC = $(wildcard src/*.c)
 

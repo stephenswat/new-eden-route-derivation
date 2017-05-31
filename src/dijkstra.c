@@ -112,11 +112,11 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     struct entity *ent;
 
     for (int remaining = u->entity_count; remaining > 0; remaining--, loops++) {
+
         update_timers(MB_START);
 
         tmp = min_heap_extract(&queue);
 
-        if (verbose >= 2) fprintf(stderr, "New entity %d (cost %lf)\n", tmp, cost[tmp]);
         if (tmp == dst->seq_id || isinf(cost[tmp])) break;
 
         update_timers(MB_SYSTEM_SET);
@@ -124,19 +124,13 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         ent = &u->entities[tmp];
         sys = ent->system;
 
-        if (verbose >= 2) fprintf(stderr, "Current entity: %s (%s)\n", ent->name, sys->name);
-
         // System set
         for (int i = 0; i < sys->entity_count; i++) {
-            if (verbose >= 2) fprintf(stderr, "Considering warp to: %s\n", sys->entities[i].name);
-
             if (!sys->entities[i].destination && sys->entities[i].seq_id != src->seq_id && sys->entities[i].seq_id != dst->seq_id) {
-                if (verbose >= 2) fprintf(stderr, "Discarding due to lack of destination.\n");
                 continue;
             }
 
             if (tmp == sys->entities[i].seq_id) {
-                if (verbose >= 2) fprintf(stderr, "Discarding due to warp to self.\n");
                 continue;
             }
 
@@ -148,9 +142,6 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                 cost[v] = cur_cost;
                 step[v] = step[tmp] + 1;
                 type[v] = WARP;
-                if (verbose >= 2) fprintf(stderr, "Cost for %d decreased to %lf.\n", v, cur_cost);
-            } else {
-                if (verbose >= 2) fprintf(stderr, "Discarding due to no decrease in heap time.\n");
             }
         }
 
@@ -175,7 +166,6 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         __m128 tmp_coord;
 
         if (!isnan(parameters->jump_range)) {
-            // #pragma omp parallel for private(tmp_coord, jsys, distance, v, cur_cost)
             for (int i = 0; i < u->system_count; i++) {
                 tmp_coord = _mm_sub_ps(sys->pos, _mm_load_ps(&sys_c[i * 4]));
                 tmp_coord = _mm_mul_ps(tmp_coord, tmp_coord);
@@ -193,7 +183,6 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                     v = jsys->entities[j].seq_id;
                     cur_cost = cost[tmp] + 60 * (distance + 1);
 
-                    // #pragma omp critical
                     if (min_heap_decrease(&queue, cur_cost, v)) {
                         prev[v] = tmp;
                         cost[v] = cur_cost;
