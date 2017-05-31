@@ -58,12 +58,24 @@ static void min_heap_ify(struct min_heap *heap, int index) {
     }
 }
 
+void min_heap_decrease_raw(struct min_heap *heap, double priority, int value) {
+    int index = heap->map[value];
+
+    if (index != -1) {
+        heap->array[index].priority = priority;
+
+        #pragma omp critical
+        min_heap_ify(heap, index);
+    }
+}
+
 bool min_heap_decrease(struct min_heap *heap, double priority, int value) {
     int index = heap->map[value];
 
     if (index != -1 && priority < heap->array[index].priority) {
         heap->array[index].priority = priority;
 
+        #pragma omp critical
         min_heap_ify(heap, index);
         return true;
     } else {

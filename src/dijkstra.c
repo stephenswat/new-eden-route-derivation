@@ -75,6 +75,7 @@ double get_time(double distance, double v_wrp) {
 struct route *dijkstra(struct universe *u, struct entity *src, struct entity *dst, struct trip * restrict parameters) {
     int *prev = malloc(LIMIT_ENTITIES * sizeof(int));
     int *step = malloc(LIMIT_ENTITIES * sizeof(int));
+    int *vist = malloc(LIMIT_ENTITIES * sizeof(int));
     double *cost = malloc(LIMIT_ENTITIES * sizeof(double));
     enum movement_type *type = malloc(LIMIT_ENTITIES * sizeof(enum movement_type));
 
@@ -93,6 +94,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     for (int i = 0; i < u->entity_count; i++) {
         if (!u->entities[i].destination && u->entities[i].seq_id != src->seq_id && u->entities[i].seq_id != dst->seq_id) continue;
 
+        vist[i] = i == src->seq_id ? 1 : 0;
         prev[i] = -1;
         type[i] = STRT;
         step[i] = i == src->seq_id ? 0 : -1;
@@ -115,6 +117,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
         ent = &u->entities[tmp];
         sys = ent->system;
+        vist[tmp] = 1;
 
         // System set
         for (int i = 0; i < sys->entity_count; i++) {
@@ -129,7 +132,8 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             v = sys->entities[i].seq_id;
             cur_cost = cost[tmp] + parameters->align_time + get_time(entity_distance(ent, &sys->entities[i]), parameters->warp_speed);
 
-            if (min_heap_decrease(&queue, cur_cost, v)) {
+            if (cur_cost <= cost[v] && !vist[v]) {
+                min_heap_decrease_raw(&queue, cur_cost, v);
                 prev[v] = tmp;
                 cost[v] = cur_cost;
                 step[v] = step[tmp] + 1;
@@ -144,7 +148,8 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             v = ent->destination->seq_id;
             cur_cost = cost[tmp] + parameters->gate_cost;
 
-            if (min_heap_decrease(&queue, cur_cost, v)) {
+            if (cur_cost <= cost[v] && !vist[v]) {
+                min_heap_decrease_raw(&queue, cur_cost, v);
                 prev[v] = tmp;
                 cost[v] = cur_cost;
                 step[v] = step[tmp] + 1;
@@ -173,7 +178,8 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                     v = jsys->entities[j].seq_id;
                     cur_cost = cost[tmp] + 60 * (distance + 1);
 
-                    if (min_heap_decrease(&queue, cur_cost, v)) {
+                    if (cur_cost <= cost[v] && !vist[v]) {
+                        min_heap_decrease_raw(&queue, cur_cost, v);
                         prev[v] = tmp;
                         cost[v] = cur_cost;
                         step[v] = step[tmp] + 1;
