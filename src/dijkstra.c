@@ -24,8 +24,7 @@ __asm__ __volatile__ (								\
 #define LY_TO_M 9460730472580800.0
 
 enum measurement_point {
-    MB_UNUSED, MB_START, MB_SYSTEM_SET, MB_GATE_SET,
-    MB_JUMP_SET, MB_END, MB_MAX
+    MB_UNUSED, MB_SYSTEM_SET, MB_GATE_SET, MB_JUMP_SET, MB_END, MB_MAX
 };
 
 static struct timespec mbt[MB_MAX];
@@ -88,10 +87,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     double sqjr = pow(parameters->jump_range * LY_TO_M, 2.0);
 
     for (int i = 0; i < u->system_count; i++) {
-        sys_c[i * 4 + 0] = u->systems[i].pos[0];
-        sys_c[i * 4 + 1] = u->systems[i].pos[1];
-        sys_c[i * 4 + 2] = u->systems[i].pos[2];
-        sys_c[i * 4 + 3] = 0;
+        _mm_store_ps(&sys_c[i * 4], u->systems[i].pos);
     }
 
     for (int i = 0; i < u->entity_count; i++) {
@@ -107,18 +103,14 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
     int tmp, v;
     int loops = 0;
+    __m128 tmp_coord;
 
     struct system *sys, *jsys;
     struct entity *ent;
 
-    for (int remaining = u->entity_count; remaining > 0; remaining--, loops++) {
+    tmp = min_heap_extract(&queue);
 
-        update_timers(MB_START);
-
-        tmp = min_heap_extract(&queue);
-
-        if (tmp == dst->seq_id || isinf(cost[tmp])) break;
-
+    for (int remaining = u->entity_count; remaining > 0 && tmp != dst->seq_id && !isinf(cost[tmp]); remaining--, loops++, tmp = min_heap_extract(&queue)) {
         update_timers(MB_SYSTEM_SET);
 
         ent = &u->entities[tmp];
@@ -163,8 +155,6 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         update_timers(MB_JUMP_SET);
 
         // Jump set
-        __m128 tmp_coord;
-
         if (!isnan(parameters->jump_range)) {
             for (int i = 0; i < u->system_count; i++) {
                 tmp_coord = _mm_sub_ps(sys->pos, _mm_load_ps(&sys_c[i * 4]));
@@ -199,7 +189,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     struct route *route = malloc(sizeof(struct route) + (step[dst->seq_id] + 1) * sizeof(struct waypoint));
 
     if (verbose >= 1) {
-        fprintf(stderr,"%lu %lu %lu %lu\n", mba[MB_START], mba[MB_SYSTEM_SET], mba[MB_GATE_SET], mba[MB_JUMP_SET]);
+        fprintf(stderr,"%lu %lu %lu\n", mba[MB_SYSTEM_SET], mba[MB_GATE_SET], mba[MB_JUMP_SET]);
     }
 
     route->loops = loops;
