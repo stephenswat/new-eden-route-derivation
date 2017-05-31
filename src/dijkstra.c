@@ -166,6 +166,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
         // Jump set
         __m128 tmp_coord;
+        int system_final;
 
         if (!isnan(parameters->jump_range)) {
             for (int i = 0; i < u->system_count; i++) {
@@ -179,8 +180,10 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                 jsys = u->systems + i;
                 distance = sqrt(tmp_coord[0]) / LY_TO_M;
 
+                system_final = (i == dst->system->seq_id) || (i == src->system->seq_id);
+
                 for (int j = 0; j < jsys->entity_count; j++) {
-                    if (!jsys->entities[j].destination && jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id) continue;
+                    if ((!system_final || (jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id)) && !jsys->entities[j].destination) continue;
 
                     v = jsys->entities[j].seq_id;
                     cur_cost = cost[tmp] + 60 * (distance + 1);

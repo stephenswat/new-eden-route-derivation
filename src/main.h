@@ -1,6 +1,6 @@
 #pragma once
 
-#define VERSION "0.0.9"
+#define VERSION "0.0.10"
 
 extern int verbose;
 
