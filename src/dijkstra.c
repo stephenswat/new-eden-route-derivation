@@ -71,43 +71,28 @@ double get_time(double distance, double v_wrp) {
     return cruise_time + t_accel + t_decel;
 }
 
-struct route *dijkstra(struct universe *u, struct entity *src, struct entity *dst, struct trip *parameters) {
-    struct min_heap queue;
-
+struct route *dijkstra(struct universe *u, struct entity *src, struct entity *dst, struct trip * restrict parameters) {
     int *prev = malloc(LIMIT_ENTITIES * sizeof(int));
     int *step = malloc(LIMIT_ENTITIES * sizeof(int));
     double *cost = malloc(LIMIT_ENTITIES * sizeof(double));
     enum movement_type *type = malloc(LIMIT_ENTITIES * sizeof(enum movement_type));
     float *jump_distance = malloc(LIMIT_SYSTEMS * sizeof(float));
 
-    int count = u->entity_count;
-
-    min_heap_init(&queue, count);
+    struct min_heap queue;
+    min_heap_init(&queue, u->entity_count);
 
     double distance, cur_cost;
-
-    double jump_range = parameters->jump_range;
-    double warp_speed = parameters->warp_speed;
-    double align_time = parameters->align_time;
-    double gate_cost = parameters->gate_cost;
-
-    double sqjr = pow(jump_range * LY_TO_M, 2.0);
+    double sqjr = pow(parameters->jump_range * LY_TO_M, 2.0);
 
     for (int i = 0; i < u->entity_count; i++) {
         if (!u->entities[i]->destination && u->entities[i]->seq_id != src->seq_id && u->entities[i]->seq_id != dst->seq_id) continue;
 
-        if (i == src->seq_id) {
-            min_heap_insert(&queue, 0, i);
-            prev[i] = -1;
-            step[i] = 0;
-            cost[i] = 0;
-            type[i] = STRT;
-        } else {
-            min_heap_insert(&queue, INFINITY, i);
-            prev[i] = -1;
-            step[i] = -1;
-            cost[i] = INFINITY;
-        }
+        prev[i] = -1;
+        type[i] = STRT;
+        step[i] = i == src->seq_id ? 0 : -1;
+        cost[i] = i == src->seq_id ? 0.0 : INFINITY;
+
+        min_heap_insert(&queue, cost[i], i);
     }
 
     int tmp, v;
@@ -116,7 +101,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     struct system *sys, *jsys;
     struct entity *ent;
 
-    for (int remaining = count; remaining > 0; remaining--, loops++) {
+    for (int remaining = u->entity_count; remaining > 0; remaining--, loops++) {
         update_timers(MB_START);
 
         tmp = min_heap_extract(&queue);
@@ -146,7 +131,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
 
             v = sys->entities[i].seq_id;
-            cur_cost = cost[tmp] + align_time + get_time(entity_distance(ent, &sys->entities[i]), warp_speed);
+            cur_cost = cost[tmp] + parameters->align_time + get_time(entity_distance(ent, &sys->entities[i]), parameters->warp_speed);
 
             if (min_heap_decrease(&queue, cur_cost, v)) {
                 prev[v] = tmp;
@@ -162,9 +147,9 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         update_timers(MB_GATE_SET);
 
         // Gate set
-        if (ent->destination && gate_cost >= 0.0) {
+        if (ent->destination && parameters->gate_cost >= 0.0) {
             v = ent->destination->seq_id;
-            cur_cost = cost[tmp] + gate_cost;
+            cur_cost = cost[tmp] + parameters->gate_cost;
 
             if (min_heap_decrease(&queue, cur_cost, v)) {
                 prev[v] = tmp;
@@ -177,7 +162,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         update_timers(MB_JUMP_RANGE);
 
         // Jump range
-        if (!isnan(jump_range)) {
+        if (!isnan(parameters->jump_range)) {
             for (int i = 0; i < u->system_count; i++) {
                 jump_distance[i] = system_distance(sys, &u->systems[i]);
             }
@@ -186,7 +171,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         update_timers(MB_JUMP_SET);
 
         // Jump set
-        if (!isnan(jump_range)) {
+        if (!isnan(parameters->jump_range)) {
             for (int i = 0; i < u->system_count; i++) {
                 if (jump_distance[i] > sqjr || sys->id == u->systems[i].id) continue;
 
