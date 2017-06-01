@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <time.h>
 #include <math.h>
+#include <omp.h>
 
 #include <xmmintrin.h>
 #include <pmmintrin.h>
@@ -112,55 +113,58 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
     tmp = min_heap_extract(&queue);
 
-    for (int remaining = u->entity_count; remaining > 0 && tmp != dst->seq_id && !isinf(cost[tmp]); remaining--, loops++, tmp = min_heap_extract(&queue)) {
-        update_timers(MB_SYSTEM_SET);
+    int remaining = u->entity_count;
 
-        ent = &u->entities[tmp];
-        sys = ent->system;
-        vist[tmp] = 1;
+    #pragma omp parallel private(v, cur_cost, tmp_coord, jsys, distance) num_threads(1)
+    while (remaining > 0 && tmp != dst->seq_id && !isinf(cost[tmp])) {
+        #pragma omp single
+        {
+            ent = &u->entities[tmp];
+            sys = ent->system;
+            vist[tmp] = 1;
 
-        // System set
-        for (int i = 0; i < sys->entity_count; i++) {
-            if (!sys->entities[i].destination && sys->entities[i].seq_id != src->seq_id && sys->entities[i].seq_id != dst->seq_id) {
-                continue;
+            // System set
+            for (int i = 0; i < sys->entity_count; i++) {
+                if (!sys->entities[i].destination && sys->entities[i].seq_id != src->seq_id && sys->entities[i].seq_id != dst->seq_id) {
+                    continue;
+                }
+
+                if (tmp == sys->entities[i].seq_id) {
+                    continue;
+                }
+
+                v = sys->entities[i].seq_id;
+                cur_cost = cost[tmp] + parameters->align_time + get_time(entity_distance(ent, &sys->entities[i]), parameters->warp_speed);
+
+                if (cur_cost <= cost[v] && !vist[v]) {
+                    min_heap_decrease_raw(&queue, cur_cost, v);
+                    prev[v] = tmp;
+                    cost[v] = cur_cost;
+                    step[v] = step[tmp] + 1;
+                    type[v] = WARP;
+                }
             }
 
-            if (tmp == sys->entities[i].seq_id) {
-                continue;
-            }
+            // Gate set
+            if (ent->destination && parameters->gate_cost >= 0.0) {
+                v = ent->destination->seq_id;
+                cur_cost = cost[tmp] + parameters->gate_cost;
 
-            v = sys->entities[i].seq_id;
-            cur_cost = cost[tmp] + parameters->align_time + get_time(entity_distance(ent, &sys->entities[i]), parameters->warp_speed);
-
-            if (cur_cost <= cost[v] && !vist[v]) {
-                min_heap_decrease_raw(&queue, cur_cost, v);
-                prev[v] = tmp;
-                cost[v] = cur_cost;
-                step[v] = step[tmp] + 1;
-                type[v] = WARP;
+                if (cur_cost <= cost[v] && !vist[v]) {
+                    min_heap_decrease_raw(&queue, cur_cost, v);
+                    prev[v] = tmp;
+                    cost[v] = cur_cost;
+                    step[v] = step[tmp] + 1;
+                    type[v] = GATE;
+                }
             }
         }
 
-        update_timers(MB_GATE_SET);
-
-        // Gate set
-        if (ent->destination && parameters->gate_cost >= 0.0) {
-            v = ent->destination->seq_id;
-            cur_cost = cost[tmp] + parameters->gate_cost;
-
-            if (cur_cost <= cost[v] && !vist[v]) {
-                min_heap_decrease_raw(&queue, cur_cost, v);
-                prev[v] = tmp;
-                cost[v] = cur_cost;
-                step[v] = step[tmp] + 1;
-                type[v] = GATE;
-            }
-        }
-
-        update_timers(MB_JUMP_SET);
+        #pragma omp barrier
 
         // Jump set
         if (!isnan(parameters->jump_range)) {
+            #pragma omp for schedule(guided)
             for (int i = 0; i < u->system_count; i++) {
                 tmp_coord = _mm_sub_ps(sys->pos, _mm_load_ps(&sys_c[i * 4]));
                 tmp_coord = _mm_mul_ps(tmp_coord, tmp_coord);
@@ -189,7 +193,14 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
             }
         }
 
-        update_timers(MB_END);
+        #pragma omp single
+        {
+            remaining--;
+            loops++;
+            tmp = min_heap_extract(&queue);
+        }
+
+        #pragma omp barrier
     }
 
     struct route *route = malloc(sizeof(struct route) + (step[dst->seq_id] + 1) * sizeof(struct waypoint));
