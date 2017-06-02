@@ -27,11 +27,10 @@ __asm__ __volatile__ (								\
 
 enum measurement_point {
     MB_INIT_START, MB_INIT_END,
+    MB_SYSTEM_START, MB_SYSTEM_END,
+    MB_GATE_START, MB_GATE_END,
+    MB_JUMP_START, MB_JUMP_END,
     MB_SELECT_START, MB_SELECT_END,
-    MB_SYSTEM_SET_START, MB_SYSTEM_SET_END,
-    MB_GATE_SET_START, MB_GATE_SET_END,
-    MB_JUMP_SET_START, MB_JUMP_SET_END,
-    MB_CLEANUP_START, MB_CLEANUP_END,
     MB_MAX
 };
 
@@ -81,6 +80,8 @@ double get_time(double distance, double v_wrp) {
 }
 
 struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parameters) {
+    update_timers(MB_INIT_START);
+
     int *prev = (int *) malloc(u.entity_count * sizeof(int));
     int *step = (int *) malloc(u.entity_count * sizeof(int));
     int *vist = (int *) malloc(u.entity_count * sizeof(int));
@@ -121,10 +122,13 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
 
     int remaining = u.entity_count;
 
+    update_timers(MB_INIT_END);
+
     #pragma omp parallel private(v, cur_cost, tmp_coord, jsys, distance) num_threads(1)
     while (remaining > 0 && tmp != dst->seq_id && !isinf(cost[tmp])) {
         #pragma omp single
         {
+            update_timers(MB_SYSTEM_START);
             ent = &u.entities[tmp];
             sys = ent->system;
             vist[tmp] = 1;
@@ -150,7 +154,9 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
                     type[v] = WARP;
                 }
             }
+            update_timers(MB_SYSTEM_END);
 
+            update_timers(MB_GATE_START);
             // Gate set
             if (ent->destination && parameters->gate_cost >= 0.0) {
                 v = ent->destination->seq_id;
@@ -164,6 +170,9 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
                     type[v] = GATE;
                 }
             }
+            update_timers(MB_GATE_END);
+
+            update_timers(MB_JUMP_START);
         }
 
         #pragma omp barrier
@@ -201,9 +210,13 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
 
         #pragma omp single
         {
+            update_timers(MB_JUMP_END);
+
+            update_timers(MB_SELECT_START);
             remaining--;
             loops++;
             tmp = queue.extract();
+            update_timers(MB_SELECT_END);
         }
 
         #pragma omp barrier
@@ -212,8 +225,14 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
     struct route *route = (struct route *) malloc(sizeof(struct route) + (step[dst->seq_id] + 1) * sizeof(struct waypoint));
 
     if (verbose >= 1) {
+        unsigned long mba_total = 0;
+
         for (int i = 1; i < MB_MAX; i += 2) {
-            fprintf(stderr, "%0.3f ", mba[i] / 10E9);
+            mba_total += mba[i];
+        }
+
+        for (int i = 1; i < MB_MAX; i += 2) {
+            fprintf(stderr, "%0.3f ms (%.1f\%), ", mba[i] / 10E6, (mba[i] / (double) mba_total) * 100);
         }
         fprintf(stderr, "\n");
     }
