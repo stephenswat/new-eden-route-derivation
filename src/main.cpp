@@ -14,8 +14,6 @@
 
 int verbose = 0;
 
-struct universe *universe;
-
 struct arguments {
     char *args[2];
     char *batch;
@@ -114,150 +112,75 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
 
 static struct argp argp = { options, parse_opt, args_doc, NULL };
 
-struct universe *load_systems_and_entities(FILE *f) {
+void load_systems_and_entities(Universe &u, FILE *f) {
     int res;
-    struct entity *ent;
-    struct universe *u;
+    Celestial *ent;
 
     unsigned int id, type_id, group_id, system_id, region_id;
-    char solar_system_str[128], constellation_id[128], region_str[128];
+    char solar_system_str[128], region_str[128], name[128], security[128], buffer[512];
     double x, y, z;
-    char name[128], security[128], buffer[512];
 
-    fgets(buffer, 512, f);
+    std::map<int, int> per_system_entities;
 
-    unsigned int system_count = 0, entity_count = 0, system_max = 0;
+    for (int i = 0; i < 2; i++) {
+        fseek(f, 0, SEEK_SET);
+        fgets(buffer, 512, f);
 
-    fgets(buffer, 512, f);
+        do {
+            res = fscanf(f, "%d,%d,%d,%[^,],%*[^,],%[^,],%*[^,],%lf,%lf,%lf,%*[^,],%[^,],%[^,],%*[^,],%*[^,\n]\n",
+                &id, &type_id, &group_id, solar_system_str, region_str, &x, &y, &z, name, security
+            );
 
-    do {
-        res = fscanf(f, "%d,%*d,%*d,%*[^,],%*[^,],%[^,],%*[^,],%*f,%*f,%*f,%*[^,],%*[^,],%*[^,],%*[^,],%*[^,\n]\n", &id, region_str);
-
-        if (id >= 30000000 && id < 40000000) {
-            region_id = atoi(region_str);
-
-            if (region_id == 10000019 || region_id == 10000017 || region_id == 10000004) {
-                continue;
+            if (strcmp("None", solar_system_str) == 0) {
+                system_id = 0;
+            } else {
+                system_id = atoi(solar_system_str);
             }
 
-            system_count++;
+            if (id >= 30000000 && id < 70000000) {
+                region_id = atoi(region_str);
 
-            if (id > system_max) system_max = id;
-        } else if (id >= 40000000) {
-            break;
-        }
-    } while (res != EOF);
+                if (region_id == 10000019 || region_id == 10000017 || region_id == 10000004) {
+                    continue;
+                }
+            }
 
-    int system_map[(system_max - 30000000) + 1];
-    unsigned int per_system_entities[system_count + 1];
-    system_count = 0;
-
-    for (unsigned int i = 0; i < ((system_max - 30000000) + 1); i++) {
-        system_map[i] = -1;
+            if (i == 0) {
+                if (id >= 40000000 && id < 70000000) {
+                    if (per_system_entities.find(system_id) == per_system_entities.end()) {
+                        per_system_entities[system_id] = 1;
+                    } else {
+                        per_system_entities[system_id]++;
+                    }
+                }
+            } else {
+                if (id >= 30000000 && id < 40000000) {
+                    u.add_system(id, name, x, y, z, per_system_entities[id]);
+                } else if (id >= 40000000 && id < 50000000) {
+                    ent = u.add_entity(system_id, id, CELESTIAL, name, x, y, z, NULL);
+                    ent->group_id = group_id;
+                } else if (id >= 50000000 && id < 60000000) {
+                    ent = u.add_entity(system_id, id, STARGATE, name, x, y, z, NULL);
+                } else if (id >= 60000000 && id < 70000000) {
+                    ent = u.add_entity(system_id, id, STATION, name, x, y, z, NULL);
+                }
+            }
+        } while (res != EOF);
     }
-
-    fseek(f, 0, SEEK_SET);
-    fgets(buffer, 512, f);
-
-    unsigned int entity_type_max[10] = {0};
-    unsigned int sid, cat;
-
-    do {
-        res = fscanf(f, "%d,%*d,%*d,%[^,],%*[^,],%[^,],%*[^,],%*f,%*f,%*f,%*[^,],%*[^,],%*[^,],%*[^,],%*[^,\n]\n",
-            &id, solar_system_str, region_str
-        );
-
-        if (id >= 30000000 && id < 70000000) {
-            region_id = atoi(region_str);
-
-            if (region_id == 10000019 || region_id == 10000017 || region_id == 10000004) {
-                continue;
-            }
-        }
-
-        if (strcmp("None", solar_system_str) == 0) {
-            system_id = 0;
-        } else {
-            system_id = atoi(solar_system_str);
-        }
-
-        if (id >= 30000000 && id < 40000000) {
-            if (system_map[id - 30000000] == -1) {
-                system_map[id - 30000000] = system_count++;
-            }
-        } else if (id >= 40000000 && id < 70000000) {
-            entity_count++;
-            assert(system_map[system_id - 30000000] != -1);
-            per_system_entities[system_map[system_id - 30000000]]++;
-        }
-
-        sid = id % 10000000;
-        cat = id / 10000000;
-
-        if (sid > entity_type_max[cat]) entity_type_max[cat] = sid;
-    } while (res != EOF);
-
-    u = universe_init(system_count, entity_count);
-
-    u->system_map = (int *) calloc(entity_type_max[3], sizeof(unsigned int));
-    u->celestial_map = (int *) calloc(entity_type_max[4], sizeof(unsigned int));
-    u->stargate_map = (int *) calloc(entity_type_max[5], sizeof(unsigned int));
-    u->station_map = (int *) calloc(entity_type_max[6], sizeof(unsigned int));
-
-    for (unsigned int i = 0; i < entity_type_max[3]; i++) u->system_map[i] = -1;
-    for (unsigned int i = 0; i < entity_type_max[4]; i++) u->celestial_map[i] = -1;
-    for (unsigned int i = 0; i < entity_type_max[5]; i++) u->stargate_map[i] = -1;
-    for (unsigned int i = 0; i < entity_type_max[6]; i++) u->station_map[i] = -1;
-
-    fseek(f, 0, SEEK_SET);
-    fgets(buffer, 512, f);
-
-    do {
-        res = fscanf(f, "%d,%d,%d,%[^,],%[^,],%[^,],%*[^,],%lf,%lf,%lf,%*[^,],%[^,],%[^,],%*[^,],%*[^,\n]\n",
-            &id, &type_id, &group_id, solar_system_str, constellation_id, region_str, &x, &y, &z, name, security
-        );
-
-        if (strcmp("None", solar_system_str) == 0) {
-            system_id = 0;
-        } else {
-            system_id = atoi(solar_system_str);
-        }
-
-        if (id >= 30000000 && id < 70000000) {
-            region_id = atoi(region_str);
-
-            if (region_id == 10000019 || region_id == 10000017 || region_id == 10000004) {
-                continue;
-            }
-        }
-
-        if (id >= 30000000 && id < 40000000) {
-            universe_add_system(u, id, name, x, y, z, per_system_entities[system_map[id - 30000000]]);
-        } else if (id >= 40000000 && id < 50000000) {
-            ent = universe_add_entity(u, system_id, id, CELESTIAL, name, x, y, z, NULL);
-            ent->group_id = group_id;
-        } else if (id >= 50000000 && id < 60000000) {
-            ent = universe_add_entity(u, system_id, id, STARGATE, name, x, y, z, NULL);
-        } else if (id >= 60000000 && id < 70000000) {
-            ent = universe_add_entity(u, system_id, id, STATION, name, x, y, z, NULL);
-        }
-    } while (res != EOF);
-
-    return u;
 }
 
-void load_stargates(FILE *f, struct universe *u) {
+void load_stargates(Universe &u, FILE *f) {
     int src, dst, res;
     char buffer[512];
-    struct entity *src_e, *dst_e;
+    Celestial *src_e, *dst_e;
 
     fgets(buffer, 512, f);
 
     do {
         res = fscanf(f, "%d,%d\n", &src, &dst);
 
-        src_e = universe_get_entity(u, src);
-        dst_e = universe_get_entity(u, dst);
+        src_e = u.get_entity(src);
+        dst_e = u.get_entity(dst);
 
         if (src_e == NULL || dst_e == NULL) {
             continue;
@@ -266,27 +189,27 @@ void load_stargates(FILE *f, struct universe *u) {
         src_e->destination=dst_e;
 
         if (src_e->name) {
-            free(src_e->name);
+            delete src_e->name;
         }
 
-        asprintf(&src_e->name, "%s - %s gate", src_e->system->name, dst_e->system->name);
+        src_e->name = new std::string(*src_e->system->name + " - " + *dst_e->system->name + " gate");
     } while (res != EOF);
 }
 
-void run_batch_experiment(FILE *f) {
+void run_batch_experiment(Universe &u, FILE *f) {
     int res;
     int src, dst;
-    struct entity *src_e, *dst_e;
+    Celestial *src_e, *dst_e;
     struct route *route;
 
     do {
         res = fscanf(f, "%d %d\n", &src, &dst);
 
-        src_e = universe_get_entity(universe, src);
-        dst_e = universe_get_entity(universe, dst);
+        src_e = u.get_entity(src);
+        dst_e = u.get_entity(dst);
 
         clock_gettime(CLOCK_MONOTONIC, &timer_start);
-        route = dijkstra(universe, src_e, dst_e, &parameters);
+        route = dijkstra(u, src_e, dst_e, &parameters);
         clock_gettime(CLOCK_MONOTONIC, &timer_end);
 
         printf("%d %d %011ld %d %d\n", src, dst, time_diff(&timer_start, &timer_end), route->length, route->loops);
@@ -295,7 +218,7 @@ void run_batch_experiment(FILE *f) {
     } while (res != EOF);
 }
 
-void run_user_interface(void) {
+void run_user_interface(Universe &universe) {
     char *pch, *input, *param, *value;
 
     while (1) {
@@ -309,7 +232,7 @@ void run_user_interface(void) {
         } else if (strcmp(pch, "route") == 0) {
             int s = atoi(strtok(NULL, " "));
             int d = atoi(strtok(NULL, " "));
-            universe_route(universe, s, d, &parameters);
+            universe.route(s, d, &parameters);
         } else if (strcmp(pch, "parameters") == 0) {
             fprintf(stderr, "Jump drive: %.1f LY\n", parameters.jump_range);
             fprintf(stderr, "Warp speed: %.1f AU/s\n", parameters.warp_speed);
@@ -329,17 +252,17 @@ void run_user_interface(void) {
     }
 }
 
-void run_generate_batch(struct universe *u, char type, int count) {
-    struct system *src_s, *dst_s;
-    struct entity *src_e, *dst_e;
+void run_generate_batch(Universe &u, char type, int count) {
+    System *src_s, *dst_s;
+    Celestial *src_e, *dst_e;
 
     for (int i = 0; i < count; i++) {
         do {
-            src_s = &u->systems[rand() % u->system_count];
+            src_s = &u.systems[rand() % u.system_count];
         } while (src_s->id >= 31000000);
 
         do {
-            dst_s = &u->systems[rand() % u->system_count];
+            dst_s = &u.systems[rand() % u.system_count];
         } while ((dst_s->id >= 31000000 && type == 'r') || (dst_s->id < 31000000 && type == 'w'));
 
         if (type == 'l') {
@@ -354,15 +277,16 @@ void run_generate_batch(struct universe *u, char type, int count) {
 }
 
 void print_additional_information(void) {
-    fprintf(stderr, "%12s: %lu bytes\n", "universe", sizeof(struct universe));
+    fprintf(stderr, "%12s: %lu bytes\n", "universe", sizeof(Universe));
     fprintf(stderr, "%12s: %lu bytes\n", "trip", sizeof(struct trip));
     fprintf(stderr, "%12s: %lu bytes\n", "route", sizeof(struct route));
-    fprintf(stderr, "%12s: %lu bytes\n", "entity", sizeof(struct entity));
-    fprintf(stderr, "%12s: %lu bytes\n", "system", sizeof(struct system));
+    fprintf(stderr, "%12s: %lu bytes\n", "entity", sizeof(Celestial));
+    fprintf(stderr, "%12s: %lu bytes\n", "system", sizeof(System));
 }
 
 int main(int argc, char **argv) {
     struct arguments arguments;
+    Universe universe(9000, 500000);
 
     arguments.batch = NULL;
     arguments.src = 0;
@@ -376,25 +300,23 @@ int main(int argc, char **argv) {
     }
 
     clock_gettime(CLOCK_MONOTONIC, &timer_start);
-    universe = load_systems_and_entities(fopen(arguments.args[0], "r"));
-    load_stargates(fopen(arguments.args[1], "r"), universe);
+    load_systems_and_entities(universe, fopen(arguments.args[0], "r"));
+    load_stargates(universe, fopen(arguments.args[1], "r"));
     clock_gettime(CLOCK_MONOTONIC, &timer_end);
 
     fprintf(stderr, "Loaded New Eden (%d systems, %d entities) in %.3f seconds...\n",
-        universe->system_count, universe->entity_count, time_diff(&timer_start, &timer_end) / 1E9
+        universe.system_count, universe.entity_count, time_diff(&timer_start, &timer_end) / 1E9
     );
 
     if (arguments.src != 0 && arguments.dst != 0) {
-        universe_route(universe, arguments.src, arguments.dst, &parameters);
+        universe.route(arguments.src, arguments.dst, &parameters);
     } else if (arguments.batch != NULL) {
-        run_batch_experiment(fopen(arguments.batch, "r"));
+        run_batch_experiment(universe, fopen(arguments.batch, "r"));
     } else if (arguments.gen_type != 0) {
         run_generate_batch(universe, arguments.gen_type, arguments.gen_count);
     } else if (!arguments.quit) {
-        run_user_interface();
+        run_user_interface(universe);
     }
-
-    universe_free(universe);
 
     return 0;
 }

@@ -1,20 +1,26 @@
 #pragma once
 #include <stdbool.h>
 
-struct min_heap_element {
-    double priority;
-    int value;
+template <class P, class V> class MinHeapElement {
+public:
+    P priority;
+    V value;
 };
 
-struct min_heap {
+template <class P, class V> class MinHeap {
+public:
+    MinHeap(int);
+    ~MinHeap();
+    void insert(P, V);
+    V extract();
+    bool decrease(P, V);
+    void decrease_raw(P, V);
+
+private:
+    void swap(V, V);
+    void update(V);
+
     int length, occupied;
     int *map;
-    struct min_heap_element *array;
+    MinHeapElement<P, V> *array;
 };
-
-extern void min_heap_init(struct min_heap *, int);
-extern void min_heap_destroy(struct min_heap *);
-extern void min_heap_insert(struct min_heap *, double, int);
-extern int min_heap_extract(struct min_heap *);
-extern bool min_heap_decrease(struct min_heap *, double, int);
-extern void min_heap_decrease_raw(struct min_heap *, double, int);

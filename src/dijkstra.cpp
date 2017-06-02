@@ -1,3 +1,4 @@
+#include <array>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -25,7 +26,13 @@ __asm__ __volatile__ (								\
 #define LY_TO_M 9460730472580800.0
 
 enum measurement_point {
-    MB_UNUSED, MB_SYSTEM_SET, MB_GATE_SET, MB_JUMP_SET, MB_END, MB_MAX
+    MB_INIT_START, MB_INIT_END,
+    MB_SELECT_START, MB_SELECT_END,
+    MB_SYSTEM_SET_START, MB_SYSTEM_SET_END,
+    MB_GATE_SET_START, MB_GATE_SET_END,
+    MB_JUMP_SET_START, MB_JUMP_SET_END,
+    MB_CLEANUP_START, MB_CLEANUP_END,
+    MB_MAX
 };
 
 static struct timespec mbt[MB_MAX];
@@ -34,11 +41,11 @@ static long mba[MB_MAX] = {0};
 static void update_timers(enum measurement_point p) {
     if (verbose >= 1) {
         clock_gettime(CLOCK_MONOTONIC, &mbt[p]);
-        mba[p - 1] += time_diff(&mbt[p - 1], &mbt[p]);
+        mba[p] += time_diff(&mbt[p - 1], &mbt[p]);
     }
 }
 
-inline float __attribute__((always_inline)) entity_distance(struct entity *a, struct entity *b) {
+inline float __attribute__((always_inline)) entity_distance(Celestial *a, Celestial *b) {
     if (a->system != b->system) return INFINITY;
 
     float dx = a->pos[0] - b->pos[0];
@@ -73,27 +80,26 @@ double get_time(double distance, double v_wrp) {
     return cruise_time + t_accel + t_decel;
 }
 
-struct route *dijkstra(struct universe *u, struct entity *src, struct entity *dst, struct trip *parameters) {
-    int *prev = (int *) malloc(LIMIT_ENTITIES * sizeof(int));
-    int *step = (int *) malloc(LIMIT_ENTITIES * sizeof(int));
-    int *vist = (int *) malloc(LIMIT_ENTITIES * sizeof(int));
-    double *cost = (double *) malloc(LIMIT_ENTITIES * sizeof(double));
-    enum movement_type *type = (enum movement_type *) malloc(LIMIT_ENTITIES * sizeof(enum movement_type));
+struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parameters) {
+    int *prev = (int *) malloc(u.entity_count * sizeof(int));
+    int *step = (int *) malloc(u.entity_count * sizeof(int));
+    int *vist = (int *) malloc(u.entity_count * sizeof(int));
+    double *cost = (double *) malloc(u.entity_count * sizeof(double));
+    enum movement_type *type = (enum movement_type *) malloc(u.entity_count * sizeof(enum movement_type));
 
-    float *sys_c = (float *) malloc(4 * LIMIT_SYSTEMS * sizeof(float));
+    float *sys_c = (float *) malloc(4 * u.system_count * sizeof(float));
 
-    struct min_heap queue;
-    min_heap_init(&queue, u->entity_count);
+    MinHeap<float, int> queue(u.entity_count);
 
     double distance, cur_cost;
     double sqjr = pow(parameters->jump_range * LY_TO_M, 2.0);
 
-    for (int i = 0; i < u->system_count; i++) {
-        _mm_store_ps(&sys_c[i * 4], u->systems[i].pos);
+    for (int i = 0; i < u.system_count; i++) {
+        _mm_store_ps(&sys_c[i * 4], u.systems[i].pos);
     }
 
-    for (int i = 0; i < u->entity_count; i++) {
-        if (!u->entities[i].destination && u->entities[i].seq_id != src->seq_id && u->entities[i].seq_id != dst->seq_id) continue;
+    for (int i = 0; i < u.entity_count; i++) {
+        if (!u.entities[i].destination && u.entities[i].seq_id != src->seq_id && u.entities[i].seq_id != dst->seq_id) continue;
 
         vist[i] = i == src->seq_id ? 1 : 0;
         prev[i] = -1;
@@ -101,25 +107,25 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         step[i] = i == src->seq_id ? 0 : -1;
         cost[i] = i == src->seq_id ? 0.0 : INFINITY;
 
-        min_heap_insert(&queue, cost[i], i);
+        queue.insert(cost[i], i);
     }
 
     int tmp, v;
     int loops = 0;
     __m128 tmp_coord;
 
-    struct system *sys, *jsys;
-    struct entity *ent;
+    System *sys, *jsys;
+    Celestial *ent;
 
-    tmp = min_heap_extract(&queue);
+    tmp = queue.extract();
 
-    int remaining = u->entity_count;
+    int remaining = u.entity_count;
 
     #pragma omp parallel private(v, cur_cost, tmp_coord, jsys, distance) num_threads(1)
     while (remaining > 0 && tmp != dst->seq_id && !isinf(cost[tmp])) {
         #pragma omp single
         {
-            ent = &u->entities[tmp];
+            ent = &u.entities[tmp];
             sys = ent->system;
             vist[tmp] = 1;
 
@@ -137,7 +143,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                 cur_cost = cost[tmp] + parameters->align_time + get_time(entity_distance(ent, &sys->entities[i]), parameters->warp_speed);
 
                 if (cur_cost <= cost[v] && !vist[v]) {
-                    min_heap_decrease_raw(&queue, cur_cost, v);
+                    queue.decrease_raw(cur_cost, v);
                     prev[v] = tmp;
                     cost[v] = cur_cost;
                     step[v] = step[tmp] + 1;
@@ -151,7 +157,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                 cur_cost = cost[tmp] + parameters->gate_cost;
 
                 if (cur_cost <= cost[v] && !vist[v]) {
-                    min_heap_decrease_raw(&queue, cur_cost, v);
+                    queue.decrease_raw(cur_cost, v);
                     prev[v] = tmp;
                     cost[v] = cur_cost;
                     step[v] = step[tmp] + 1;
@@ -165,15 +171,15 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         // Jump set
         if (!isnan(parameters->jump_range)) {
             #pragma omp for schedule(guided)
-            for (int i = 0; i < u->system_count; i++) {
+            for (int i = 0; i < u.system_count; i++) {
                 tmp_coord = _mm_sub_ps(sys->pos, _mm_load_ps(&sys_c[i * 4]));
                 tmp_coord = _mm_mul_ps(tmp_coord, tmp_coord);
                 tmp_coord = _mm_hadd_ps(tmp_coord, tmp_coord);
                 tmp_coord = _mm_hadd_ps(tmp_coord, tmp_coord);
 
-                if (tmp_coord[0] > sqjr || sys->id == u->systems[i].id) continue;
+                if (tmp_coord[0] > sqjr || sys->id == u.systems[i].id) continue;
 
-                jsys = u->systems + i;
+                jsys = u.systems + i;
                 distance = sqrt(tmp_coord[0]) / LY_TO_M;
 
                 for (int j = jsys->gates - jsys->entities; j < jsys->entity_count; j++) {
@@ -183,7 +189,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
                     cur_cost = cost[tmp] + 60 * (distance + 1);
 
                     if (cur_cost <= cost[v] && !vist[v]) {
-                        min_heap_decrease_raw(&queue, cur_cost, v);
+                        queue.decrease_raw(cur_cost, v);
                         prev[v] = tmp;
                         cost[v] = cur_cost;
                         step[v] = step[tmp] + 1;
@@ -197,7 +203,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         {
             remaining--;
             loops++;
-            tmp = min_heap_extract(&queue);
+            tmp = queue.extract();
         }
 
         #pragma omp barrier
@@ -206,7 +212,10 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
     struct route *route = (struct route *) malloc(sizeof(struct route) + (step[dst->seq_id] + 1) * sizeof(struct waypoint));
 
     if (verbose >= 1) {
-        fprintf(stderr,"%lu %lu %lu\n", mba[MB_SYSTEM_SET], mba[MB_GATE_SET], mba[MB_JUMP_SET]);
+        for (int i = 1; i < MB_MAX; i += 2) {
+            fprintf(stderr, "%0.3f ", mba[i] / 10E9);
+        }
+        fprintf(stderr, "\n");
     }
 
     route->loops = loops;
@@ -215,14 +224,13 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
 
     for (int c = dst->seq_id, i = route->length - 1; i >= 0; c = prev[c], i--) {
         route->points[i].type = type[c];
-        route->points[i].entity = &u->entities[c];
+        route->points[i].entity = &u.entities[c];
     }
-
-    min_heap_destroy(&queue);
 
     free(prev);
     free(step);
     free(cost);
+    free(vist);
     free(type);
     free(sys_c);
 

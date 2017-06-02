@@ -1,10 +1,11 @@
 #pragma once
 
+#include <string>
+#include <map>
 #include <xmmintrin.h>
 
-#define LIMIT_ENTITIES 500000
-#define LIMIT_ENTITIES_PER_SYSTEM 256
-#define LIMIT_SYSTEMS 9000
+class Celestial;
+class System;
 
 enum entity_type {
     CELESTIAL, STATION, STARGATE
@@ -22,7 +23,7 @@ struct trip {
 };
 
 struct waypoint {
-    struct entity *entity;
+    Celestial *entity;
     enum movement_type type;
 };
 
@@ -32,38 +33,42 @@ struct route {
     struct waypoint points[];
 };
 
-struct entity {
+class Entity {
+public:
     __m128 pos;
     int id, seq_id;
-    char *name;
-
-    enum entity_type type;
-    int group_id;
-    struct system *system;
-    struct entity *destination;
-} __attribute__ ((aligned(64)));
-
-struct system {
-    __m128 pos;
-    int id, seq_id;
-    char *name;
-
-    int entity_count;
-    struct entity *entities, *gates;
-} __attribute__ ((aligned(64)));
-
-struct universe {
-    int system_count, entity_count, stargate_count;
-    struct system *systems;
-    struct entity *entities, *last_entity;
-
-    int *system_map, *stargate_map, *celestial_map, *station_map;
+    std::string *name;
 };
 
-struct universe *universe_init(unsigned int, unsigned int);
-void universe_free(struct universe *);
-void universe_add_system(struct universe *, int, char *, double, double, double, unsigned int);
-struct entity *universe_add_entity(struct universe *, int, int, enum entity_type, char *, double, double, double, struct entity *);
-void universe_route(struct universe *, int, int, struct trip *);
-struct entity *universe_get_entity(struct universe *, int);
-struct entity *universe_get_entity_or_default(struct universe *, int);
+class Celestial: public Entity {
+public:
+    enum entity_type type;
+    int group_id;
+    System *system;
+    Celestial *destination;
+} __attribute__ ((aligned(64)));
+
+class System: public Entity {
+public:
+    int entity_count;
+    Celestial *entities, *gates;
+} __attribute__ ((aligned(64)));
+
+class Universe {
+public:
+    Universe(unsigned int, unsigned int);
+    ~Universe();
+    void add_system(int, char *, double, double, double, unsigned int);
+    Celestial *add_entity(int, int, enum entity_type, char *, double, double, double, Celestial *);
+    void route(int, int, struct trip *);
+    Celestial *get_entity(int);
+    System *get_system(int);
+    Celestial *get_entity_or_default(int);
+    int system_count = 0, entity_count = 0, stargate_count = 0;
+    System *systems;
+    Celestial *entities;
+
+private:
+    Celestial *last_entity;
+    std::map<int, int> entity_map, system_map;
+};

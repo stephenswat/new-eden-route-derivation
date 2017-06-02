@@ -9,48 +9,48 @@
 #define RIGHT_CHILD(i) ((i << 1) + 2)
 #define PARENT_ENTRY(i) ((i - 1) >> 1)
 
-void min_heap_init(struct min_heap *heap, int size) {
-    heap->length = size;
-    heap->occupied = 0;
-    heap->map = (int *) calloc(size, sizeof(int));
-    heap->array = (struct min_heap_element *) calloc(size, sizeof(struct min_heap_element));
+template <class P, class V> MinHeap<P, V>::MinHeap(int size) {
+    this->length = size;
+    this->occupied = 0;
+    this->map = (int *) calloc(size, sizeof(int));
+    this->array = (struct MinHeapElement<P, V> *) calloc(size, sizeof(MinHeapElement<P, V>));
 
     for (int i = 0; i < size; i++) {
-        heap->map[i] = -1;
+        this->map[i] = -1;
     }
 }
 
-void min_heap_destroy(struct min_heap *heap) {
-    free(heap->map);
-    free(heap->array);
+template <class P, class V> MinHeap<P, V>::~MinHeap() {
+    free(this->map);
+    free(this->array);
 }
 
-static void min_heap_swap(struct min_heap *heap, int ia, int ib) {
-    struct min_heap_element *a, *b, tmp;
+template <class P, class V> void MinHeap<P, V>::swap(V ia, V ib) {
+    MinHeapElement<P, V> *a, *b, tmp;
 
-    a = heap->array + ia;
-    b = heap->array + ib;
+    a = this->array + ia;
+    b = this->array + ib;
 
     tmp = *a;
     *a = *b;
     *b = tmp;
 
-    heap->map[b->value] = ib;
-    heap->map[a->value] = ia;
+    this->map[b->value] = ib;
+    this->map[a->value] = ia;
 }
 
-static void min_heap_ify(struct min_heap *heap, int index) {
-    struct min_heap_element *elem, *parent;
+template <class P, class V> void MinHeap<P, V>::update(V index) {
+    MinHeapElement<P, V> *elem, *parent;
     int parent_index;
 
     while (index > 0) {
         parent_index = PARENT_ENTRY(index);
 
-        elem = heap->array + index;
-        parent = heap->array + parent_index;
+        elem = this->array + index;
+        parent = this->array + parent_index;
 
         if (elem->priority < parent->priority) {
-            min_heap_swap(heap, index, parent_index);
+            this->swap(index, parent_index);
             index = parent_index;
         } else {
             break;
@@ -58,26 +58,26 @@ static void min_heap_ify(struct min_heap *heap, int index) {
     }
 }
 
-void min_heap_decrease_raw(struct min_heap *heap, double priority, int value) {
-    int index = heap->map[value];
+template <class P, class V> void MinHeap<P, V>::decrease_raw(P priority, V value) {
+    int index = this->map[value];
 
     if (index != -1) {
         #pragma omp critical(min_heap_lock)
         {
-            heap->array[index].priority = priority;
-            min_heap_ify(heap, index);
+            this->array[index].priority = priority;
+            this->update(index);
         }
     }
 }
 
-bool min_heap_decrease(struct min_heap *heap, double priority, int value) {
-    int index = heap->map[value];
+template <class P, class V> bool MinHeap<P, V>::decrease(P priority, V value) {
+    int index = this->map[value];
 
-    if (index != -1 && priority < heap->array[index].priority) {
+    if (index != -1 && priority < this->array[index].priority) {
         #pragma omp critical(min_heap_lock)
         {
-            heap->array[index].priority = priority;
-            min_heap_ify(heap, index);
+            this->array[index].priority = priority;
+            this->update(index);
         }
 
         return true;
@@ -86,44 +86,44 @@ bool min_heap_decrease(struct min_heap *heap, double priority, int value) {
     }
 }
 
-void min_heap_insert(struct min_heap *heap, double priority, int value) {
-    struct min_heap_element *elem;
+template <class P, class V> void MinHeap<P, V>::insert(P priority, V value) {
+    MinHeapElement<P, V> *elem;
     int index;
 
-    index = heap->occupied++;
-    elem = heap->array + index;
+    index = this->occupied++;
+    elem = this->array + index;
 
     elem->priority = priority;
     elem->value = value;
 
-    heap->map[value] = index;
+    this->map[value] = index;
 
-    min_heap_ify(heap, index);
+    this->update(index);
 }
 
-int min_heap_extract(struct min_heap *heap) {
-    struct min_heap_element *elem, *child_left, *child_right, *child_smallest;
-    int rv = heap->array[0].value, index, child_index;
+template <class P, class V> V MinHeap<P, V>::extract() {
+    MinHeapElement<P, V> *elem, *child_left, *child_right, *child_smallest;
+    V rv = this->array[0].value, index, child_index;
 
-    heap->map[heap->array[0].value] = -1;
-    elem = heap->array + --heap->occupied;
-    heap->array[0].priority = elem->priority;
-    heap->array[0].value = elem->value;
-    heap->map[heap->array[0].value] = 0;
+    this->map[this->array[0].value] = -1;
+    elem = this->array + --this->occupied;
+    this->array[0].priority = elem->priority;
+    this->array[0].value = elem->value;
+    this->map[this->array[0].value] = 0;
 
     index = 0;
 
-    while (index < heap->occupied) {
-        elem = heap->array + index;
+    while (index < this->occupied) {
+        elem = this->array + index;
 
-        if (LEFT_CHILD(index) < heap->occupied) {
-            child_left = heap->array + LEFT_CHILD(index);
+        if (LEFT_CHILD(index) < this->occupied) {
+            child_left = this->array + LEFT_CHILD(index);
         } else {
             child_left = NULL;
         }
 
-        if (RIGHT_CHILD(index) < heap->occupied) {
-            child_right = heap->array + RIGHT_CHILD(index);
+        if (RIGHT_CHILD(index) < this->occupied) {
+            child_right = this->array + RIGHT_CHILD(index);
         } else {
             child_right = NULL;
         }
@@ -142,7 +142,7 @@ int min_heap_extract(struct min_heap *heap) {
         }
 
         if (elem->priority > child_smallest->priority) {
-            min_heap_swap(heap, index, child_index);
+            this->swap(index, child_index);
             index = child_index;
         } else {
             break;
@@ -152,41 +152,4 @@ int min_heap_extract(struct min_heap *heap) {
     return rv;
 }
 
-// void main(void) {
-//     struct min_heap heap;
-//
-//     // Expected: 299, 7, 11, 199, 5, 8, 3, 10, 2
-//
-//     min_heap_init(&heap, 10);
-//
-//     min_heap_insert(&heap, 5.0, 10);
-//     min_heap_insert(&heap, 3.0, 3);
-//     min_heap_insert(&heap, 10.0, 2);
-//     min_heap_insert(&heap, 200.0, 7);
-//     min_heap_insert(&heap, INFINITY, 5);
-//     min_heap_insert(&heap, 1.0, 8);
-//     min_heap_insert(&heap, 6.0, 11);
-//     min_heap_insert(&heap, 0.5, 199);
-//     min_heap_insert(&heap, 0.25, 299);
-//
-//     min_heap_decrease(&heap, 50, 299);
-//
-//     printf("%d\n", min_heap_extract(&heap));
-//
-//     min_heap_decrease(&heap, 0.125, 7);
-//
-//     printf("%d\n", min_heap_extract(&heap));
-//
-//     min_heap_decrease(&heap, 0.2, 11);
-//
-//     printf("%d\n", min_heap_extract(&heap));
-//     printf("%d\n", min_heap_extract(&heap));
-//
-//     min_heap_decrease(&heap, 0.01, 5);
-//
-//     printf("%d\n", min_heap_extract(&heap));
-//     printf("%d\n", min_heap_extract(&heap));
-//     printf("%d\n", min_heap_extract(&heap));
-//     printf("%d\n", min_heap_extract(&heap));
-//     printf("%d\n", min_heap_extract(&heap));
-// }
+template class MinHeap<float, int>;
