@@ -1,12 +1,12 @@
 CC = g++
-CFLAGS = -mtune=native -msse4.1 -Wall -Wextra -fopenmp -D _GNU_SOURCE -std=gnu++11 -fPIC -Og -g -Wno-missing-field-initializers -Isrc/ -MMD -I/usr/include/python3.5m/ -Iinclude
+CPPFLAGS = -mtune=native -msse4.1 -Wall -Wextra -fopenmp -D _GNU_SOURCE -std=gnu++14 -fPIC -Og -g -Wno-missing-field-initializers -Isrc/ -MMD -I/usr/include/python3.5m/ -Iinclude
 LDFLAGS += -fopenmp
 LDLIBS += -Llib -lreadline -lm -l:eve_nerd.so
 SRC = $(wildcard src/*.cpp)
 
 .PHONY: clean
 
-main: lib/eve_nerd.so lib/_eve_nerd.so src/main.o
+main: lib/eve_nerd.so src/main.o #lib/_eve_nerd.so
 	$(CC) $(LDFLAGS) -o $@ src/main.o $(LDLIBS)
 
 %_wrap.c: %.i
@@ -21,7 +21,7 @@ lib/eve_nerd.so: src/dijkstra.o src/min_heap.o src/universe.o
 	$(CC) $(LDFLAGS) -shared -o $@ $^
 
 clean:
-	rm -r lib
-	rm main $(SRC:.c=.o) $(SRC:.c=.d)
+	-rm -r lib
+	rm main $(SRC:.cpp=.o) $(SRC:.cpp=.d)
 
--include $(SRC:.c=.d)
+-include $(SRC:.cpp=.d)
