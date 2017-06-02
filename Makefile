@@ -1,8 +1,8 @@
-CC = gcc
-CFLAGS = -mtune=native -msse4.1 -Wall -Wextra -fopenmp -D _GNU_SOURCE -std=gnu11 -fPIC -Og -g -Wno-missing-field-initializers -Isrc/ -MMD -I/usr/include/python2.7/
+CC = g++
+CFLAGS = -mtune=native -msse4.1 -Wall -Wextra -fopenmp -D _GNU_SOURCE -std=gnu++11 -fPIC -Og -g -Wno-missing-field-initializers -Isrc/ -MMD -I/usr/include/python3.5m/ -Iinclude
 LDFLAGS += -fopenmp
 LDLIBS += -Llib -lreadline -lm -l:eve_nerd.so
-SRC = $(wildcard src/*.c)
+SRC = $(wildcard src/*.cpp)
 
 .PHONY: clean
 

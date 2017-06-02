@@ -8,9 +8,9 @@
 #include <xmmintrin.h>
 #include <pmmintrin.h>
 
-#include "main.h"
-#include "min_heap.h"
-#include "universe.h"
+#include "main.hpp"
+#include "min_heap.hpp"
+#include "universe.hpp"
 
 #define IACA_SSC_MARK( MARK_ID )						\
 __asm__ __volatile__ (								\
@@ -73,14 +73,14 @@ double get_time(double distance, double v_wrp) {
     return cruise_time + t_accel + t_decel;
 }
 
-struct route *dijkstra(struct universe *u, struct entity *src, struct entity *dst, struct trip * restrict parameters) {
-    int *prev = malloc(LIMIT_ENTITIES * sizeof(int));
-    int *step = malloc(LIMIT_ENTITIES * sizeof(int));
-    int *vist = malloc(LIMIT_ENTITIES * sizeof(int));
-    double *cost = malloc(LIMIT_ENTITIES * sizeof(double));
-    enum movement_type *type = malloc(LIMIT_ENTITIES * sizeof(enum movement_type));
+struct route *dijkstra(struct universe *u, struct entity *src, struct entity *dst, struct trip *parameters) {
+    int *prev = (int *) malloc(LIMIT_ENTITIES * sizeof(int));
+    int *step = (int *) malloc(LIMIT_ENTITIES * sizeof(int));
+    int *vist = (int *) malloc(LIMIT_ENTITIES * sizeof(int));
+    double *cost = (double *) malloc(LIMIT_ENTITIES * sizeof(double));
+    enum movement_type *type = (enum movement_type *) malloc(LIMIT_ENTITIES * sizeof(enum movement_type));
 
-    float *sys_c = malloc(4 * LIMIT_SYSTEMS * sizeof(float));
+    float *sys_c = (float *) malloc(4 * LIMIT_SYSTEMS * sizeof(float));
 
     struct min_heap queue;
     min_heap_init(&queue, u->entity_count);
@@ -203,7 +203,7 @@ struct route *dijkstra(struct universe *u, struct entity *src, struct entity *ds
         #pragma omp barrier
     }
 
-    struct route *route = malloc(sizeof(struct route) + (step[dst->seq_id] + 1) * sizeof(struct waypoint));
+    struct route *route = (struct route *) malloc(sizeof(struct route) + (step[dst->seq_id] + 1) * sizeof(struct waypoint));
 
     if (verbose >= 1) {
         fprintf(stderr,"%lu %lu %lu\n", mba[MB_SYSTEM_SET], mba[MB_GATE_SET], mba[MB_JUMP_SET]);

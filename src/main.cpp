@@ -8,9 +8,9 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
-#include "main.h"
-#include "universe.h"
-#include "dijkstra.h"
+#include "main.hpp"
+#include "universe.hpp"
+#include "dijkstra.hpp"
 
 int verbose = 0;
 
@@ -22,7 +22,8 @@ struct arguments {
     int silent;
     int quit;
     int gen_count;
-    int src, dst;
+    int src;
+    int dst;
     char gen_type;
 };
 
@@ -57,7 +58,7 @@ long time_diff(struct timespec *start, struct timespec *end) {
 }
 
 static error_t parse_opt (int key, char *arg, struct argp_state *state) {
-    struct arguments *arguments = state->input;
+    struct arguments *arguments = (struct arguments *) state->input;
 
     switch (key) {
         case 'v':
@@ -198,10 +199,10 @@ struct universe *load_systems_and_entities(FILE *f) {
 
     u = universe_init(system_count, entity_count);
 
-    u->system_map = calloc(entity_type_max[3], sizeof(unsigned int));
-    u->celestial_map = calloc(entity_type_max[4], sizeof(unsigned int));
-    u->stargate_map = calloc(entity_type_max[5], sizeof(unsigned int));
-    u->station_map = calloc(entity_type_max[6], sizeof(unsigned int));
+    u->system_map = (int *) calloc(entity_type_max[3], sizeof(unsigned int));
+    u->celestial_map = (int *) calloc(entity_type_max[4], sizeof(unsigned int));
+    u->stargate_map = (int *) calloc(entity_type_max[5], sizeof(unsigned int));
+    u->station_map = (int *) calloc(entity_type_max[6], sizeof(unsigned int));
 
     for (unsigned int i = 0; i < entity_type_max[3]; i++) u->system_map[i] = -1;
     for (unsigned int i = 0; i < entity_type_max[4]; i++) u->celestial_map[i] = -1;
@@ -361,7 +362,12 @@ void print_additional_information(void) {
 }
 
 int main(int argc, char **argv) {
-    struct arguments arguments = { .batch = NULL, .src = 0, .dst = 0, .gen_type = 0 };
+    struct arguments arguments;
+
+    arguments.batch = NULL;
+    arguments.src = 0;
+    arguments.dst = 0;
+    arguments.gen_type = 0;
 
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 

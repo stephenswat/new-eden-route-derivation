@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <math.h>
 
-#include "min_heap.h"
+#include "min_heap.hpp"
 
 #define LEFT_CHILD(i) ((i << 1) + 1)
 #define RIGHT_CHILD(i) ((i << 1) + 2)
@@ -12,8 +12,8 @@
 void min_heap_init(struct min_heap *heap, int size) {
     heap->length = size;
     heap->occupied = 0;
-    heap->map = calloc(size, sizeof(int));
-    heap->array = calloc(size, sizeof(struct min_heap_element));
+    heap->map = (int *) calloc(size, sizeof(int));
+    heap->array = (struct min_heap_element *) calloc(size, sizeof(struct min_heap_element));
 
     for (int i = 0; i < size; i++) {
         heap->map[i] = -1;

@@ -1,12 +1,16 @@
+#include <string>
+#include <iostream>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
 
-#include "universe.h"
-#include "dijkstra.h"
+#include "universe.hpp"
+#include "dijkstra.hpp"
 
-static char *movement_type_str[4] = { [JUMP] = "JUMP", [GATE] = "GATE", [WARP] = "WARP", [STRT] = "STRT" };
+using namespace std;
+
+static string movement_type_str[4] = { [JUMP] = "JUMP", [GATE] = "GATE", [WARP] = "WARP", [STRT] = "STRT" };
 
 struct system *universe_get_system(struct universe *u, int id) {
     int index = u->system_map[id % 10000000];
@@ -68,7 +72,7 @@ void universe_route(struct universe *u, int src_id, int dst_id, struct trip *par
     fprintf(stderr, "Route: \n");
 
     for (int i = 0; i < route->length; i++) {
-        fprintf(stderr, "    %s: %s\n", movement_type_str[route->points[i].type], route->points[i].entity->name);
+        cerr << "    " << movement_type_str[route->points[i].type] << ": " << route->points[i].entity->name;
     }
 
     free(route);
@@ -133,10 +137,10 @@ struct entity *universe_add_entity(struct universe *u, int system, int id, enum 
 }
 
 struct universe *universe_init(unsigned int systems, unsigned int entities) {
-    struct universe *u = calloc(1, sizeof(struct universe));
+    struct universe *u = (struct universe *) calloc(1, sizeof(struct universe));
 
-    u->entities = calloc(entities, sizeof(struct entity));
-    u->systems = calloc(systems, sizeof(struct system));
+    u->entities = (struct entity *) calloc(entities, sizeof(struct entity));
+    u->systems = (struct system *) calloc(systems, sizeof(struct system));
     u->last_entity = u->entities;
 
     return u;
