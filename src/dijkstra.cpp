@@ -26,6 +26,7 @@ __asm__ __volatile__ (								\
 #define LY_TO_M 9460730472580800.0
 
 enum measurement_point {
+    MB_TOTAL_START, MB_TOTAL_END,
     MB_INIT_START, MB_INIT_END,
     MB_SYSTEM_START, MB_SYSTEM_END,
     MB_GATE_START, MB_GATE_END,
@@ -80,20 +81,20 @@ double get_time(double distance, double v_wrp) {
 }
 
 struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parameters) {
+    update_timers(MB_TOTAL_START);
     update_timers(MB_INIT_START);
 
     int *prev = (int *) malloc(u.entity_count * sizeof(int));
     int *step = (int *) malloc(u.entity_count * sizeof(int));
     int *vist = (int *) malloc(u.entity_count * sizeof(int));
-    double *cost = (double *) malloc(u.entity_count * sizeof(double));
+    float *cost = (float *) malloc(u.entity_count * sizeof(float));
     enum movement_type *type = (enum movement_type *) malloc(u.entity_count * sizeof(enum movement_type));
 
     float *sys_c = (float *) malloc(4 * u.system_count * sizeof(float));
 
     MinHeap<float, int> queue(u.entity_count);
 
-    double distance, cur_cost;
-    double sqjr = pow(parameters->jump_range * LY_TO_M, 2.0);
+    float distance, cur_cost;
 
     for (int i = 0; i < u.system_count; i++) {
         _mm_store_ps(&sys_c[i * 4], u.systems[i].pos);
@@ -114,6 +115,7 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
     int tmp, v;
     int loops = 0;
     __m128 tmp_coord;
+    __m128 sjr_vec = _mm_set_ss(pow(parameters->jump_range * LY_TO_M, 2.0));
 
     System *sys, *jsys;
     Celestial *ent;
@@ -126,7 +128,7 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
 
     #pragma omp parallel private(v, cur_cost, tmp_coord, jsys, distance) num_threads(1)
     while (remaining > 0 && tmp != dst->seq_id && !isinf(cost[tmp])) {
-        #pragma omp single
+        #pragma omp master
         {
             update_timers(MB_SYSTEM_START);
             ent = &u.entities[tmp];
@@ -186,7 +188,7 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
                 tmp_coord = _mm_hadd_ps(tmp_coord, tmp_coord);
                 tmp_coord = _mm_hadd_ps(tmp_coord, tmp_coord);
 
-                if (tmp_coord[0] > sqjr || sys->id == u.systems[i].id) continue;
+                if (_mm_ucomile_ss(sjr_vec, tmp_coord) || sys->id == u.systems[i].id) continue;
 
                 jsys = u.systems + i;
                 distance = sqrt(tmp_coord[0]) / LY_TO_M;
@@ -208,7 +210,7 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
             }
         }
 
-        #pragma omp single
+        #pragma omp master
         {
             update_timers(MB_JUMP_END);
 
@@ -218,21 +220,21 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
             tmp = queue.extract();
             update_timers(MB_SELECT_END);
         }
-
-        #pragma omp barrier
     }
+
+    update_timers(MB_TOTAL_END);
 
     struct route *route = (struct route *) malloc(sizeof(struct route) + (step[dst->seq_id] + 1) * sizeof(struct waypoint));
 
     if (verbose >= 1) {
         unsigned long mba_total = 0;
 
-        for (int i = 1; i < MB_MAX; i += 2) {
+        for (int i = 3; i < MB_MAX; i += 2) {
             mba_total += mba[i];
         }
 
         for (int i = 1; i < MB_MAX; i += 2) {
-            fprintf(stderr, "%0.3f ms (%.1f\%), ", mba[i] / 10E6, (mba[i] / (double) mba_total) * 100);
+            fprintf(stderr, "%0.3f ms (%.1f\%), ", mba[i] / 1000000.0, (mba[i] / (double) mba_total) * 100);
         }
         fprintf(stderr, "\n");
     }

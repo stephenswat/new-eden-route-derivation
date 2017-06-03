@@ -212,7 +212,7 @@ void run_batch_experiment(Universe &u, FILE *f) {
         route = dijkstra(u, src_e, dst_e, &parameters);
         clock_gettime(CLOCK_MONOTONIC, &timer_end);
 
-        printf("%d %d %011ld %d %d\n", src, dst, time_diff(&timer_start, &timer_end), route->length, route->loops);
+        printf("%d %d %ld %d %d\n", src, dst, time_diff(&timer_start, &timer_end), route->length, route->loops);
 
         free(route);
     } while (res != EOF);
