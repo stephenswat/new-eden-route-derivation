@@ -13,7 +13,7 @@ template <class P, class V> MinHeap<P, V>::MinHeap(int size) {
     this->length = size;
     this->occupied = 0;
     this->map = (int *) calloc(size, sizeof(int));
-    this->array = (struct MinHeapElement<P, V> *) calloc(size, sizeof(MinHeapElement<P, V>));
+    this->array = (MinHeapElement<P, V> *) calloc(size, sizeof(MinHeapElement<P, V>));
 
     for (int i = 0; i < size; i++) {
         this->map[i] = -1;
