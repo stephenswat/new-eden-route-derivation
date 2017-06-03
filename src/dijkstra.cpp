@@ -89,7 +89,10 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
     float *cost = (float *) malloc(u.entity_count * sizeof(float));
     enum movement_type *type = (enum movement_type *) malloc(u.entity_count * sizeof(enum movement_type));
 
-    float *sys_c = (float *) malloc(4 * u.system_count * sizeof(float));
+    float *sys_c = (float *) calloc(4 * (u.system_count + 3), sizeof(float));
+    float *sys_x = (float *) calloc((u.system_count + 3), sizeof(float));
+    float *sys_y = (float *) calloc((u.system_count + 3), sizeof(float));
+    float *sys_z = (float *) calloc((u.system_count + 3), sizeof(float));
 
     MinHeap<float, int> queue(u.entity_count);
 
@@ -97,6 +100,9 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
 
     for (int i = 0; i < u.system_count; i++) {
         _mm_store_ps(&sys_c[i * 4], u.systems[i].pos);
+        sys_x[i] = u.systems[i].pos[0];
+        sys_y[i] = u.systems[i].pos[1];
+        sys_z[i] = u.systems[i].pos[2];
     }
 
     for (int i = 0; i < u.entity_count; i++) {
@@ -112,8 +118,9 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
 
     int tmp, v;
     int loops = 0;
-    __m128 tmp_coord;
-    __m128 sjr_vec = _mm_set_ss(pow(parameters->jump_range * LY_TO_M, 2.0));
+    float sqjr = pow(parameters->jump_range * LY_TO_M, 2.0);
+    __m128 x_vec, y_vec, z_vec;
+    __m128 x_src_vec, y_src_vec, z_src_vec;
 
     System *sys, *jsys;
     Celestial *ent;
@@ -124,7 +131,7 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
 
     update_timers(MB_INIT_END);
 
-    #pragma omp parallel private(v, cur_cost, tmp_coord, jsys, distance) num_threads(1)
+    #pragma omp parallel private(v, cur_cost, jsys, distance) num_threads(1)
     while (remaining > 0 && tmp != dst->seq_id && !isinf(cost[tmp])) {
         #pragma omp master
         {
@@ -171,23 +178,34 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
             update_timers(MB_GATE_END);
 
             update_timers(MB_JUMP_START);
+
+            x_src_vec = _mm_set_ps1(sys->pos[0]);
+            y_src_vec = _mm_set_ps1(sys->pos[1]);
+            z_src_vec = _mm_set_ps1(sys->pos[2]);
         }
 
         #pragma omp barrier
 
         // Jump set
         if (!isnan(parameters->jump_range)) {
-            #pragma omp for schedule(guided)
+            #pragma omp for schedule(static)
             for (int i = 0; i < u.system_count; i++) {
-                tmp_coord = _mm_sub_ps(sys->pos, _mm_load_ps(&sys_c[i * 4]));
-                tmp_coord = _mm_mul_ps(tmp_coord, tmp_coord);
-                tmp_coord = _mm_hadd_ps(tmp_coord, tmp_coord);
-                tmp_coord = _mm_hadd_ps(tmp_coord, tmp_coord);
+                if (i % 4 == 0) {
+                    x_vec = _mm_load_ps(sys_x + i) - x_src_vec;
+                    y_vec = _mm_load_ps(sys_y + i) - y_src_vec;
+                    z_vec = _mm_load_ps(sys_z + i) - z_src_vec;
 
-                if (_mm_ucomile_ss(sjr_vec, tmp_coord) || sys->id == u.systems[i].id) continue;
+                    x_vec *= x_vec;
+                    y_vec *= y_vec;
+                    z_vec *= z_vec;
+
+                    x_vec += y_vec + z_vec;
+                }
+
+                if (x_vec[i % 4] > sqjr || sys->id == u.systems[i].id) continue;
 
                 jsys = u.systems + i;
-                distance = sqrt(tmp_coord[0]) / LY_TO_M;
+                distance = sqrt(x_vec[i % 4]) / LY_TO_M;
 
                 for (int j = jsys->gates - jsys->entities; j < jsys->entity_count; j++) {
                     if (!jsys->entities[j].destination && ((jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id))) continue;
