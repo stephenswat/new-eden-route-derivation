@@ -80,12 +80,11 @@ double get_time(double distance, double v_wrp) {
     return cruise_time + t_accel + t_decel;
 }
 
-struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parameters) {
+Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parameters) {
     update_timers(MB_TOTAL_START);
     update_timers(MB_INIT_START);
 
     int *prev = (int *) malloc(u.entity_count * sizeof(int));
-    int *step = (int *) malloc(u.entity_count * sizeof(int));
     int *vist = (int *) malloc(u.entity_count * sizeof(int));
     float *cost = (float *) malloc(u.entity_count * sizeof(float));
     enum movement_type *type = (enum movement_type *) malloc(u.entity_count * sizeof(enum movement_type));
@@ -104,9 +103,8 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
         if (!u.entities[i].destination && u.entities[i].seq_id != src->seq_id && u.entities[i].seq_id != dst->seq_id) continue;
 
         vist[i] = i == src->seq_id ? 1 : 0;
-        prev[i] = -1;
+        prev[i] = i == src->seq_id ? -2 : -1;
         type[i] = STRT;
-        step[i] = i == src->seq_id ? 0 : -1;
         cost[i] = i == src->seq_id ? 0.0 : INFINITY;
 
         queue.insert(cost[i], i);
@@ -152,7 +150,6 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
                     queue.decrease_raw(cur_cost, v);
                     prev[v] = tmp;
                     cost[v] = cur_cost;
-                    step[v] = step[tmp] + 1;
                     type[v] = WARP;
                 }
             }
@@ -168,7 +165,6 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
                     queue.decrease_raw(cur_cost, v);
                     prev[v] = tmp;
                     cost[v] = cur_cost;
-                    step[v] = step[tmp] + 1;
                     type[v] = GATE;
                 }
             }
@@ -203,7 +199,6 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
                         queue.decrease_raw(cur_cost, v);
                         prev[v] = tmp;
                         cost[v] = cur_cost;
-                        step[v] = step[tmp] + 1;
                         type[v] = JUMP;
                     }
                 }
@@ -224,7 +219,7 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
 
     update_timers(MB_TOTAL_END);
 
-    struct route *route = (struct route *) malloc(sizeof(struct route) + (step[dst->seq_id] + 1) * sizeof(struct waypoint));
+    Route *route = new Route();
 
     if (verbose >= 1) {
         unsigned long mba_total = 0;
@@ -236,20 +231,18 @@ struct route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip 
         for (int i = 1; i < MB_MAX; i += 2) {
             fprintf(stderr, "%0.3f ms (%.1f\%), ", mba[i] / 1000000.0, (mba[i] / (double) mba_total) * 100);
         }
+
         fprintf(stderr, "\n");
     }
 
     route->loops = loops;
-    route->length = step[dst->seq_id] + 1;
     route->cost = cost[dst->seq_id];
 
-    for (int c = dst->seq_id, i = route->length - 1; i >= 0; c = prev[c], i--) {
-        route->points[i].type = type[c];
-        route->points[i].entity = &u.entities[c];
+    for (int c = dst->seq_id; c != -2; c = prev[c]) {
+        route->points.push_front((struct waypoint) {&u.entities[c], type[c]});
     }
 
     free(prev);
-    free(step);
     free(cost);
     free(vist);
     free(type);

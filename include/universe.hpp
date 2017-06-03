@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <list>
 #include <map>
 #include <xmmintrin.h>
 
@@ -27,10 +28,11 @@ struct waypoint {
     enum movement_type type;
 };
 
-struct route {
-    int length, loops;
+class Route {
+public:
+    int loops;
     double cost;
-    struct waypoint points[];
+    std::list<struct waypoint> points;
 };
 
 class Entity {

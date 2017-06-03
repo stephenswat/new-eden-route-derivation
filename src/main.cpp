@@ -200,7 +200,7 @@ void run_batch_experiment(Universe &u, FILE *f) {
     int res;
     int src, dst;
     Celestial *src_e, *dst_e;
-    struct route *route;
+    Route *route;
 
     do {
         res = fscanf(f, "%d %d\n", &src, &dst);
@@ -212,7 +212,7 @@ void run_batch_experiment(Universe &u, FILE *f) {
         route = dijkstra(u, src_e, dst_e, &parameters);
         clock_gettime(CLOCK_MONOTONIC, &timer_end);
 
-        printf("%d %d %ld %d %d\n", src, dst, time_diff(&timer_start, &timer_end), route->length, route->loops);
+        printf("%d %d %ld %d %d\n", src, dst, time_diff(&timer_start, &timer_end), route->points.size(), route->loops);
 
         free(route);
     } while (res != EOF);
@@ -279,7 +279,7 @@ void run_generate_batch(Universe &u, char type, int count) {
 void print_additional_information(void) {
     fprintf(stderr, "%12s: %lu bytes\n", "universe", sizeof(Universe));
     fprintf(stderr, "%12s: %lu bytes\n", "trip", sizeof(struct trip));
-    fprintf(stderr, "%12s: %lu bytes\n", "route", sizeof(struct route));
+    fprintf(stderr, "%12s: %lu bytes\n", "route", sizeof(Route));
     fprintf(stderr, "%12s: %lu bytes\n", "entity", sizeof(Celestial));
     fprintf(stderr, "%12s: %lu bytes\n", "system", sizeof(System));
 }
