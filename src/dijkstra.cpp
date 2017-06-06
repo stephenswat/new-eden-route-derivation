@@ -25,6 +25,17 @@ __asm__ __volatile__ (								\
 #define AU_TO_M 149597870700.0
 #define LY_TO_M 9460730472580800.0
 
+#if defined(__AVX__)
+#include <immintrin.h>
+#define VECTOR_WIDTH 8
+typedef __m256 vector_type;
+#elif defined(__SSE__)
+#define VECTOR_WIDTH 4
+typedef __m128 vector_type;
+#else
+#error "Here's a nickel kid, buy yourself a real computer."
+#endif
+
 enum measurement_point {
     MB_TOTAL_START, MB_TOTAL_END,
     MB_INIT_START, MB_INIT_END,
@@ -119,8 +130,9 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
     int tmp, v;
     int loops = 0;
     float sqjr = pow(parameters->jump_range * LY_TO_M, 2.0);
-    __m128 x_vec, y_vec, z_vec;
-    __m128 x_src_vec, y_src_vec, z_src_vec;
+
+    vector_type x_vec, y_vec, z_vec;
+    vector_type x_src_vec, y_src_vec, z_src_vec;
 
     System *sys, *jsys;
     Celestial *ent;
@@ -179,22 +191,38 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
 
             update_timers(MB_JUMP_START);
 
-            x_src_vec = _mm_set_ps1(sys->pos[0]);
-            y_src_vec = _mm_set_ps1(sys->pos[1]);
-            z_src_vec = _mm_set_ps1(sys->pos[2]);
+            #if VECTOR_WIDTH == 4
+            x_src_vec = _mm_set1_ps(sys->pos[0]);
+            y_src_vec = _mm_set1_ps(sys->pos[1]);
+            z_src_vec = _mm_set1_ps(sys->pos[2]);
+            #elif VECTOR_WIDTH == 8
+            x_src_vec = _mm256_set1_ps(sys->pos[0]);
+            y_src_vec = _mm256_set1_ps(sys->pos[1]);
+            z_src_vec = _mm256_set1_ps(sys->pos[2]);
+            #endif
         }
 
         // Jump set
         if (!isnan(parameters->jump_range)) {
             #pragma omp for schedule(guided)
-            for (int k = 0; k < u.system_count; k+=4) {
-                x_vec = _mm_load_ps(sys_x + k) - x_src_vec;
-                y_vec = _mm_load_ps(sys_y + k) - y_src_vec;
-                z_vec = _mm_load_ps(sys_z + k) - z_src_vec;
+            for (int k = 0; k < u.system_count; k += VECTOR_WIDTH) {
+                #if VECTOR_WIDTH == 4
+                x_vec = _mm_load_ps(sys_x + k);
+                y_vec = _mm_load_ps(sys_y + k);
+                z_vec = _mm_load_ps(sys_z + k);
+                #elif VECTOR_WIDTH == 8
+                x_vec = _mm256_load_ps(sys_x + k);
+                y_vec = _mm256_load_ps(sys_y + k);
+                z_vec = _mm256_load_ps(sys_z + k);
+                #endif
+
+                x_vec -= x_src_vec;
+                y_vec -= y_src_vec;
+                z_vec -= z_src_vec;
 
                 x_vec = (x_vec * x_vec) + (y_vec * y_vec) + (z_vec * z_vec);
 
-                for (int i = 0; i < 4; i++) {
+                for (int i = 0; i < VECTOR_WIDTH; i++) {
                     if (x_vec[i] > sqjr || sys->id == u.systems[i].id) continue;
 
                     jsys = u.systems + k + i;
