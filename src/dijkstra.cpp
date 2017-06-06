@@ -131,7 +131,7 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
 
     update_timers(MB_INIT_END);
 
-    #pragma omp parallel private(v, cur_cost, jsys, distance) num_threads(1)
+    #pragma omp parallel private(v, cur_cost, jsys, distance, x_vec, y_vec, z_vec) num_threads(3)
     while (remaining > 0 && tmp != dst->seq_id && !isinf(cost[tmp])) {
         #pragma omp master
         {
@@ -184,40 +184,34 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
             z_src_vec = _mm_set_ps1(sys->pos[2]);
         }
 
-        #pragma omp barrier
-
         // Jump set
         if (!isnan(parameters->jump_range)) {
-            #pragma omp for schedule(static)
-            for (int i = 0; i < u.system_count; i++) {
-                if (i % 4 == 0) {
-                    x_vec = _mm_load_ps(sys_x + i) - x_src_vec;
-                    y_vec = _mm_load_ps(sys_y + i) - y_src_vec;
-                    z_vec = _mm_load_ps(sys_z + i) - z_src_vec;
+            #pragma omp for schedule(guided)
+            for (int k = 0; k < u.system_count; k+=4) {
+                x_vec = _mm_load_ps(sys_x + k) - x_src_vec;
+                y_vec = _mm_load_ps(sys_y + k) - y_src_vec;
+                z_vec = _mm_load_ps(sys_z + k) - z_src_vec;
 
-                    x_vec *= x_vec;
-                    y_vec *= y_vec;
-                    z_vec *= z_vec;
+                x_vec = (x_vec * x_vec) + (y_vec * y_vec) + (z_vec * z_vec);
 
-                    x_vec += y_vec + z_vec;
-                }
+                for (int i = 0; i < 4; i++) {
+                    if (x_vec[i] > sqjr || sys->id == u.systems[i].id) continue;
 
-                if (x_vec[i % 4] > sqjr || sys->id == u.systems[i].id) continue;
+                    jsys = u.systems + k + i;
+                    distance = sqrt(x_vec[i]) / LY_TO_M;
 
-                jsys = u.systems + i;
-                distance = sqrt(x_vec[i % 4]) / LY_TO_M;
+                    for (int j = jsys->gates - jsys->entities; j < jsys->entity_count; j++) {
+                        if (!jsys->entities[j].destination && ((jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id))) continue;
 
-                for (int j = jsys->gates - jsys->entities; j < jsys->entity_count; j++) {
-                    if (!jsys->entities[j].destination && ((jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id))) continue;
+                        v = jsys->entities[j].seq_id;
+                        cur_cost = cost[tmp] + 60 * (distance + 1);
 
-                    v = jsys->entities[j].seq_id;
-                    cur_cost = cost[tmp] + 60 * (distance + 1);
-
-                    if (cur_cost <= cost[v] && !vist[v]) {
-                        queue.decrease_raw(cur_cost, v);
-                        prev[v] = tmp;
-                        cost[v] = cur_cost;
-                        type[v] = JUMP;
+                        if (cur_cost <= cost[v] && !vist[v]) {
+                            queue.decrease_raw(cur_cost, v);
+                            prev[v] = tmp;
+                            cost[v] = cur_cost;
+                            type[v] = JUMP;
+                        }
                     }
                 }
             }
@@ -233,6 +227,8 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
             tmp = queue.extract();
             update_timers(MB_SELECT_END);
         }
+
+        #pragma omp barrier
     }
 
     update_timers(MB_TOTAL_END);
