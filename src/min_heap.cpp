@@ -62,7 +62,6 @@ template <class P, class V> void MinHeap<P, V>::decrease_raw(P priority, V value
     int index = this->map[value];
 
     if (index != -1) {
-        #pragma omp critical(min_heap_lock)
         {
             this->array[index].priority = priority;
             this->update(index);
@@ -74,7 +73,6 @@ template <class P, class V> bool MinHeap<P, V>::decrease(P priority, V value) {
     int index = this->map[value];
 
     if (index != -1 && priority < this->array[index].priority) {
-        #pragma omp critical(min_heap_lock)
         {
             this->array[index].priority = priority;
             this->update(index);

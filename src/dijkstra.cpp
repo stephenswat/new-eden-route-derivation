@@ -235,10 +235,13 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
                         cur_cost = cost[tmp] + 60 * (distance + 1);
 
                         if (cur_cost <= cost[v] && !vist[v]) {
-                            queue.decrease_raw(cur_cost, v);
-                            prev[v] = tmp;
-                            cost[v] = cur_cost;
-                            type[v] = JUMP;
+                            #pragma omp critical
+                            {
+                                queue.decrease_raw(cur_cost, v);
+                                prev[v] = tmp;
+                                cost[v] = cur_cost;
+                                type[v] = JUMP;
+                            }
                         }
                     }
                 }
