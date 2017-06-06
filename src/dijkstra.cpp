@@ -243,7 +243,7 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
         }
 
         for (int i = 1; i < MB_MAX; i += 2) {
-            fprintf(stderr, "%0.3f ms (%.1f\%), ", mba[i] / 1000000.0, (mba[i] / (double) mba_total) * 100);
+            fprintf(stderr, "%0.3f ms (%.1f%%), ", mba[i] / 1000000.0, (mba[i] / (double) mba_total) * 100);
         }
 
         fprintf(stderr, "\n");

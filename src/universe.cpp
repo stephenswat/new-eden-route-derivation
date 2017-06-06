@@ -53,7 +53,7 @@ void Universe::route(int src_id, int dst_id, struct trip *param) {
 
     Route *route = dijkstra(*this, src, dst, param);
 
-    fprintf(stderr, "Travel time: %u minutes, %02u seconds (%d steps)\n", ((int) route->cost) / 60, ((int) route->cost) % 60, route->points.size());
+    fprintf(stderr, "Travel time: %u minutes, %02u seconds (%lu steps)\n", ((int) route->cost) / 60, ((int) route->cost) % 60, route->points.size());
     fprintf(stderr, "Route: \n");
 
     for (auto i = route->points.begin(); i != route->points.end(); i++) {
