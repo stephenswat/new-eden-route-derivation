@@ -100,10 +100,10 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
     float *cost = (float *) malloc(u.entity_count * sizeof(float));
     enum movement_type *type = (enum movement_type *) malloc(u.entity_count * sizeof(enum movement_type));
 
-    float *sys_c = (float *) calloc(4 * (u.system_count + 3), sizeof(float));
-    float *sys_x = (float *) calloc((u.system_count + 3), sizeof(float));
-    float *sys_y = (float *) calloc((u.system_count + 3), sizeof(float));
-    float *sys_z = (float *) calloc((u.system_count + 3), sizeof(float));
+    float *sys_c = (float *) calloc(4 * (u.system_count + VECTOR_WIDTH), sizeof(float));
+    float *sys_x = (float *) calloc((u.system_count + VECTOR_WIDTH), sizeof(float));
+    float *sys_y = (float *) calloc((u.system_count + VECTOR_WIDTH), sizeof(float));
+    float *sys_z = (float *) calloc((u.system_count + VECTOR_WIDTH), sizeof(float));
 
     MinHeap<float, int> queue(u.entity_count);
 
