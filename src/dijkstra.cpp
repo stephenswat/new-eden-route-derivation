@@ -211,9 +211,9 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
                 y_vec = _mm_load_ps(sys_y + k);
                 z_vec = _mm_load_ps(sys_z + k);
                 #elif VECTOR_WIDTH == 8
-                x_vec = _mm256_load_ps(sys_x + k);
-                y_vec = _mm256_load_ps(sys_y + k);
-                z_vec = _mm256_load_ps(sys_z + k);
+                x_vec = _mm256_loadu_ps(sys_x + k);
+                y_vec = _mm256_loadu_ps(sys_y + k);
+                z_vec = _mm256_loadu_ps(sys_z + k);
                 #endif
 
                 x_vec -= x_src_vec;
