@@ -50,8 +50,8 @@ static struct timespec mbt[MB_MAX];
 static long mba[MB_MAX] = {0};
 
 static void update_timers(enum measurement_point p) {
-    if (verbose >= 1) {
-        clock_gettime(CLOCK_MONOTONIC, &mbt[p]);
+    clock_gettime(CLOCK_MONOTONIC, &mbt[p]);
+    if (p % 2 == 1) {
         mba[p] += time_diff(&mbt[p - 1], &mbt[p]);
     }
 }
