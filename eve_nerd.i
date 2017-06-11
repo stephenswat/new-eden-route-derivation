@@ -1,8 +1,10 @@
 %module eve_nerd
 %{
-#include "dijkstra.hpp"
 #include "universe.hpp"
-#include "min_heap.hpp"
+#include "parameters.hpp"
 %}
 %include <std_string.i>
+%include <std_list.i>
 %include "universe.hpp"
+%include "parameters.hpp"
+%template(WaypointList) std::list<struct waypoint>;

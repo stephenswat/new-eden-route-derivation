@@ -39,11 +39,11 @@ Celestial *Universe::get_entity_or_default(int id) {
     return ent;
 }
 
-Route *Universe::route(int src_id, int dst_id, struct trip *param) {
+Route *Universe::route(int src_id, int dst_id, Parameters *param) {
     return this->route(*this->get_entity_or_default(src_id), *this->get_entity_or_default(dst_id), param);
 }
 
-Route *Universe::route(Celestial &src, Celestial &dst, struct trip *param) {
+Route *Universe::route(Celestial &src, Celestial &dst, Parameters *param) {
     return dijkstra(*this, &src, &dst, param);
 }
 

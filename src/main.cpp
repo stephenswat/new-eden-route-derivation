@@ -30,7 +30,7 @@ static struct timespec timer_start, timer_end;
 
 static char args_doc[] = "mapDenormalized mapJumps";
 
-static struct trip parameters = { .jump_range = NAN, .warp_speed = 3, .align_time = 5.0};
+static Parameters parameters(NAN, 3.0, 5.0, 10.0);
 
 static struct argp_option options[] = {
     {"quiet", 'q', 0, 0, "Don't produce any output", 0 },
@@ -189,7 +189,7 @@ void run_generate_batch(Universe &u, char type, int count) {
     }
 }
 
-void run_route(Universe &u, int src_id, int dst_id, struct trip *param) {
+void run_route(Universe &u, int src_id, int dst_id, Parameters *param) {
     Celestial *src = u.get_entity_or_default(src_id);
     Celestial *dst = u.get_entity_or_default(dst_id);
 
@@ -209,7 +209,7 @@ void run_route(Universe &u, int src_id, int dst_id, struct trip *param) {
 
 void print_additional_information(void) {
     fprintf(stderr, "%12s: %lu bytes\n", "universe", sizeof(Universe));
-    fprintf(stderr, "%12s: %lu bytes\n", "trip", sizeof(struct trip));
+    fprintf(stderr, "%12s: %lu bytes\n", "trip", sizeof(Parameters));
     fprintf(stderr, "%12s: %lu bytes\n", "route", sizeof(Route));
     fprintf(stderr, "%12s: %lu bytes\n", "entity", sizeof(Celestial));
     fprintf(stderr, "%12s: %lu bytes\n", "system", sizeof(System));

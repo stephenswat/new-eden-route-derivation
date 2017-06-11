@@ -2,4 +2,4 @@
 
 #include "universe.hpp"
 
-Route *dijkstra(Universe &u, Celestial *, Celestial *, struct trip *);
+Route *dijkstra(Universe &u, Celestial *, Celestial *, Parameters *);

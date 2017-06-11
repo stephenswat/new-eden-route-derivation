@@ -97,7 +97,7 @@ double get_time(double distance, double v_wrp) {
     return cruise_time + t_accel + t_decel;
 }
 
-Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parameters) {
+Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *parameters) {
     update_timers(MB_TOTAL_START);
     update_timers(MB_INIT_START);
 

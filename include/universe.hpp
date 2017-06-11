@@ -5,6 +5,8 @@
 #include <map>
 #include <xmmintrin.h>
 
+#include "parameters.hpp"
+
 class Celestial;
 class System;
 
@@ -17,13 +19,6 @@ enum movement_type {
 };
 
 static std::string movement_type_str[4] = { [JUMP] = "JUMP", [GATE] = "GATE", [WARP] = "WARP", [STRT] = "STRT" };
-
-struct trip {
-    double jump_range;
-    double warp_speed;
-    double align_time;
-    double gate_cost;
-};
 
 struct waypoint {
     Celestial *entity;
@@ -65,8 +60,8 @@ public:
     ~Universe();
     void add_system(int, char *, double, double, double, unsigned int);
     Celestial *add_entity(int, int, enum entity_type, char *, double, double, double, Celestial *);
-    Route *route(int, int, struct trip *);
-    Route *route(Celestial &, Celestial &, struct trip *);
+    Route *route(int, int, Parameters *);
+    Route *route(Celestial &, Celestial &, Parameters *);
     Celestial *get_entity(int);
     System *get_system(int);
     Celestial *get_entity_or_default(int);
