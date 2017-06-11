@@ -12,13 +12,17 @@ To run the program, first download and unpack the required data files:
 
 Then compile the program:
 
+    mkdir build
+    cd build
+    cmake ..
     make
-
-Make sure the compiled shared library can be found by the interface object file
-by adding it to the library path:
-
-    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`(cd lib; pwd)`
 
 Finally, run the program:
 
-    ./main --jump 7.0 -R 40091580:40308384 mapDenormalize.csv mapJumps.csv
+    ./eve_nerd --jump 7.0 -R 40091580:40308384 mapDenormalize.csv mapJumps.csv
+
+Alternatively, in Python:
+
+    import eve_nerd
+    u = eve_nerd.Universe("../mapDenormalize.csv", "../mapJumps.csv")
+    b = u.route(40004334, 40348191, eve_nerd.BATTLECRUISER)
