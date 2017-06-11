@@ -1,5 +1,4 @@
 #include <string>
-#include <iostream>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -9,8 +8,6 @@
 #include "dijkstra.hpp"
 
 using namespace std;
-
-static string movement_type_str[4] = { [JUMP] = "JUMP", [GATE] = "GATE", [WARP] = "WARP", [STRT] = "STRT" };
 
 System *Universe::get_system(int id) {
     return this->systems + this->system_map[id];
@@ -25,7 +22,6 @@ Celestial *Universe::get_entity_or_default(int id) {
     Celestial *ent = NULL;
 
     if (id >= 30000000 && id < 40000000) {
-        cerr << "Warning: ID " << id << " is a system. ";
         sys = this->get_system(id);
 
         for (int i = 0; i < sys->entity_count; i++) {
@@ -36,8 +32,6 @@ Celestial *Universe::get_entity_or_default(int id) {
                 ent = &sys->entities[i];
             }
         }
-
-        cerr << "Assuming " << (ent->type == STATION ? "station" : "celestial") << " " << *ent->name << ".\n";
     } else {
         ent = this->get_entity(id);
     }
@@ -45,22 +39,12 @@ Celestial *Universe::get_entity_or_default(int id) {
     return ent;
 }
 
-void Universe::route(int src_id, int dst_id, struct trip *param) {
-    Celestial *src = this->get_entity_or_default(src_id);
-    Celestial *dst = this->get_entity_or_default(dst_id);
+Route *Universe::route(int src_id, int dst_id, struct trip *param) {
+    return this->route(*this->get_entity_or_default(src_id), *this->get_entity_or_default(dst_id), param);
+}
 
-    cerr << "Routing from " << *src->name << " to " << *dst->name << "...\n";
-
-    Route *route = dijkstra(*this, src, dst, param);
-
-    fprintf(stderr, "Travel time: %u minutes, %02u seconds (%lu steps)\n", ((int) route->cost) / 60, ((int) route->cost) % 60, route->points.size());
-    fprintf(stderr, "Route: \n");
-
-    for (auto i = route->points.begin(); i != route->points.end(); i++) {
-        cerr << "    " << movement_type_str[i->type] << ": " << *i->entity->name << "\n";
-    }
-
-    delete route;
+Route *Universe::route(Celestial &src, Celestial &dst, struct trip *param) {
+    return dijkstra(*this, &src, &dst, param);
 }
 
 void Universe::add_system(int id, char *name, double x, double y, double z, unsigned int entities) {
@@ -207,7 +191,7 @@ void Universe::load_stargates(FILE *f) {
 
 void Universe::initialise(FILE *entities, FILE *gates) {
     this->entities = (Celestial *) calloc(500000, sizeof(Celestial));
-    this->systems = (System *) calloc(90000, sizeof(System));
+    this->systems = (System *) calloc(9000, sizeof(System));
 
     this->last_entity = this->entities;
 

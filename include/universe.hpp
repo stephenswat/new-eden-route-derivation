@@ -16,6 +16,8 @@ enum movement_type {
     JUMP, GATE, WARP, STRT
 };
 
+static std::string movement_type_str[4] = { [JUMP] = "JUMP", [GATE] = "GATE", [WARP] = "WARP", [STRT] = "STRT" };
+
 struct trip {
     double jump_range;
     double warp_speed;
@@ -63,7 +65,8 @@ public:
     ~Universe();
     void add_system(int, char *, double, double, double, unsigned int);
     Celestial *add_entity(int, int, enum entity_type, char *, double, double, double, Celestial *);
-    void route(int, int, struct trip *);
+    Route *route(int, int, struct trip *);
+    Route *route(Celestial &, Celestial &, struct trip *);
     Celestial *get_entity(int);
     System *get_system(int);
     Celestial *get_entity_or_default(int);

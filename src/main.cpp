@@ -1,3 +1,4 @@
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -124,11 +125,7 @@ void run_batch_experiment(Universe &u, FILE *f) {
         src_e = u.get_entity(src);
         dst_e = u.get_entity(dst);
 
-        clock_gettime(CLOCK_MONOTONIC, &timer_start);
         route = dijkstra(u, src_e, dst_e, &parameters);
-        clock_gettime(CLOCK_MONOTONIC, &timer_end);
-
-        printf("%d %d %ld %lu %d\n", src, dst, time_diff(&timer_start, &timer_end), route->points.size(), route->loops);
 
         free(route);
     } while (res != EOF);
@@ -192,6 +189,24 @@ void run_generate_batch(Universe &u, char type, int count) {
     }
 }
 
+void run_route(Universe &u, int src_id, int dst_id, struct trip *param) {
+    Celestial *src = u.get_entity_or_default(src_id);
+    Celestial *dst = u.get_entity_or_default(dst_id);
+
+    std::cout << "Routing from " << *src->name << " to " << *dst->name << "...\n";
+
+    Route *route = dijkstra(u, src, dst, param);
+
+    fprintf(stderr, "Travel time: %u minutes, %02u seconds (%lu steps)\n", ((int) route->cost) / 60, ((int) route->cost) % 60, route->points.size());
+    fprintf(stderr, "Route: \n");
+
+    for (auto i = route->points.begin(); i != route->points.end(); i++) {
+        std::cout << "    " << movement_type_str[i->type] << ": " << *i->entity->name << "\n";
+    }
+
+    delete route;
+}
+
 void print_additional_information(void) {
     fprintf(stderr, "%12s: %lu bytes\n", "universe", sizeof(Universe));
     fprintf(stderr, "%12s: %lu bytes\n", "trip", sizeof(struct trip));
@@ -223,7 +238,7 @@ int main(int argc, char **argv) {
     );
 
     if (arguments.src != 0 && arguments.dst != 0) {
-        universe.route(arguments.src, arguments.dst, &parameters);
+        run_route(universe, arguments.src, arguments.dst, &parameters);
     } else if (arguments.batch != NULL) {
         run_batch_experiment(universe, fopen(arguments.batch, "r"));
     } else if (arguments.gen_type != 0) {
