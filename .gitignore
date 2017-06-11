@@ -42,3 +42,6 @@ NERD*
 data/
 benchmarks/
 benchmark.sh
+
+# CMake stuff
+build/
