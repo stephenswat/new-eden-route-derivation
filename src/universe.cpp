@@ -52,7 +52,7 @@ void Universe::add_system(int id, char *name, double x, double y, double z, unsi
     System *s = &(this->systems[seq_id]);
     this->system_map[id] = seq_id;
 
-    s->name = new std::string(name);
+    s->name = std::string(name);
     s->id = id;
     s->seq_id = seq_id;
     s->entity_count = 0;
@@ -88,7 +88,7 @@ Celestial *Universe::add_entity(int system, int id, enum entity_type type, char 
         s->gates = e;
     }
 
-    e->name = new std::string(name);
+    e->name = std::string(name);
     e->id = id;
     e->seq_id = seq_id;
 
@@ -181,11 +181,7 @@ void Universe::load_stargates(FILE *f) {
 
         src_e->destination=dst_e;
 
-        if (src_e->name) {
-            delete src_e->name;
-        }
-
-        src_e->name = new std::string(*src_e->system->name + " - " + *dst_e->system->name + " gate");
+        src_e->name = std::string(src_e->system->name + " - " + dst_e->system->name + " gate");
     } while (res != EOF);
 }
 
@@ -214,14 +210,6 @@ Universe::Universe(FILE *entities, FILE *gates) {
 }
 
 Universe::~Universe() {
-    for (int i = 0; i < this->entity_count; i++) {
-        if (this->entities[i].name) delete this->entities[i].name;
-    }
-
-    for (int i = 0; i < this->system_count; i++) {
-        if (this->systems[i].name) delete this->systems[i].name;
-    }
-
     free(this->entities);
     free(this->systems);
 }

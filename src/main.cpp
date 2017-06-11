@@ -193,7 +193,7 @@ void run_route(Universe &u, int src_id, int dst_id, Parameters *param) {
     Celestial *src = u.get_entity_or_default(src_id);
     Celestial *dst = u.get_entity_or_default(dst_id);
 
-    std::cout << "Routing from " << *src->name << " to " << *dst->name << "...\n";
+    std::cout << "Routing from " << src->name << " to " << dst->name << "...\n";
 
     Route *route = dijkstra(u, src, dst, param);
 
@@ -201,7 +201,7 @@ void run_route(Universe &u, int src_id, int dst_id, Parameters *param) {
     fprintf(stderr, "Route: \n");
 
     for (auto i = route->points.begin(); i != route->points.end(); i++) {
-        std::cout << "    " << movement_type_str[i->type] << ": " << *i->entity->name << "\n";
+        std::cout << "    " << movement_type_str[i->type] << ": " << i->entity->name << "\n";
     }
 
     delete route;

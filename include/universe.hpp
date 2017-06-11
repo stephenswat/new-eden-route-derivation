@@ -36,7 +36,7 @@ class Entity {
 public:
     __m128 pos;
     int id, seq_id;
-    std::string *name;
+    std::string name;
 };
 
 class Celestial: public Entity {
