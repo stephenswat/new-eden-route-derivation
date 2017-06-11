@@ -58,7 +58,8 @@ public:
 
 class Universe {
 public:
-    Universe(unsigned int, unsigned int);
+    Universe(FILE *, FILE *);
+    Universe(std::string, std::string);
     ~Universe();
     void add_system(int, char *, double, double, double, unsigned int);
     Celestial *add_entity(int, int, enum entity_type, char *, double, double, double, Celestial *);
@@ -71,6 +72,9 @@ public:
     Celestial *entities;
 
 private:
+    void initialise(FILE *, FILE *);
+    void load_stargates(FILE *);
+    void load_systems_and_entities(FILE *);
     Celestial *last_entity;
     std::map<int, int> entity_map, system_map;
 };

@@ -112,90 +112,6 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
 
 static struct argp argp = { options, parse_opt, args_doc, NULL };
 
-void load_systems_and_entities(Universe &u, FILE *f) {
-    int res;
-    Celestial *ent;
-
-    unsigned int id, type_id, group_id, system_id, region_id;
-    char solar_system_str[128], region_str[128], name[128], security[128], buffer[512];
-    double x, y, z;
-
-    std::map<int, int> per_system_entities;
-
-    for (int i = 0; i < 2; i++) {
-        fseek(f, 0, SEEK_SET);
-        fgets(buffer, 512, f);
-
-        do {
-            res = fscanf(f, "%d,%d,%d,%[^,],%*[^,],%[^,],%*[^,],%lf,%lf,%lf,%*[^,],%[^,],%[^,],%*[^,],%*[^,\n]\n",
-                &id, &type_id, &group_id, solar_system_str, region_str, &x, &y, &z, name, security
-            );
-
-            if (strcmp("None", solar_system_str) == 0) {
-                system_id = 0;
-            } else {
-                system_id = atoi(solar_system_str);
-            }
-
-            if (id >= 30000000 && id < 70000000) {
-                region_id = atoi(region_str);
-
-                if (region_id == 10000019 || region_id == 10000017 || region_id == 10000004) {
-                    continue;
-                }
-            }
-
-            if (i == 0) {
-                if (id >= 40000000 && id < 70000000) {
-                    if (per_system_entities.find(system_id) == per_system_entities.end()) {
-                        per_system_entities[system_id] = 1;
-                    } else {
-                        per_system_entities[system_id]++;
-                    }
-                }
-            } else {
-                if (id >= 30000000 && id < 40000000) {
-                    u.add_system(id, name, x, y, z, per_system_entities[id]);
-                } else if (id >= 40000000 && id < 50000000) {
-                    ent = u.add_entity(system_id, id, CELESTIAL, name, x, y, z, NULL);
-                    ent->group_id = group_id;
-                } else if (id >= 50000000 && id < 60000000) {
-                    ent = u.add_entity(system_id, id, STARGATE, name, x, y, z, NULL);
-                } else if (id >= 60000000 && id < 70000000) {
-                    ent = u.add_entity(system_id, id, STATION, name, x, y, z, NULL);
-                }
-            }
-        } while (res != EOF);
-    }
-}
-
-void load_stargates(Universe &u, FILE *f) {
-    int src, dst, res;
-    char buffer[512];
-    Celestial *src_e, *dst_e;
-
-    fgets(buffer, 512, f);
-
-    do {
-        res = fscanf(f, "%d,%d\n", &src, &dst);
-
-        src_e = u.get_entity(src);
-        dst_e = u.get_entity(dst);
-
-        if (src_e == NULL || dst_e == NULL) {
-            continue;
-        }
-
-        src_e->destination=dst_e;
-
-        if (src_e->name) {
-            delete src_e->name;
-        }
-
-        src_e->name = new std::string(*src_e->system->name + " - " + *dst_e->system->name + " gate");
-    } while (res != EOF);
-}
-
 void run_batch_experiment(Universe &u, FILE *f) {
     int res;
     int src, dst;
@@ -286,7 +202,6 @@ void print_additional_information(void) {
 
 int main(int argc, char **argv) {
     struct arguments arguments;
-    Universe universe(9000, 500000);
 
     arguments.batch = NULL;
     arguments.src = 0;
@@ -300,8 +215,7 @@ int main(int argc, char **argv) {
     }
 
     clock_gettime(CLOCK_MONOTONIC, &timer_start);
-    load_systems_and_entities(universe, fopen(arguments.args[0], "r"));
-    load_stargates(universe, fopen(arguments.args[1], "r"));
+    Universe universe(arguments.args[0], arguments.args[1]);
     clock_gettime(CLOCK_MONOTONIC, &timer_end);
 
     fprintf(stderr, "Loaded New Eden (%d systems, %d entities) in %.3f seconds...\n",
