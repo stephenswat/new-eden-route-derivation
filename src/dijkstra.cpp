@@ -13,15 +13,6 @@
 #include "min_heap.hpp"
 #include "universe.hpp"
 
-#define IACA_SSC_MARK( MARK_ID )						\
-__asm__ __volatile__ (								\
-					  "\n\t  movl $"#MARK_ID", %%ebx"	\
-					  "\n\t  .byte 0x64, 0x67, 0x90"	\
-					  : : : "memory" );
-
-#define IACA_START {IACA_SSC_MARK(111)}
-#define IACA_END {IACA_SSC_MARK(222)}
-
 #define AU_TO_M 149597870700.0
 #define LY_TO_M 9460730472580800.0
 
