@@ -5,5 +5,4 @@
 #include "min_heap.hpp"
 %}
 %include <std_string.i>
-%include "dijkstra.hpp"
 %include "universe.hpp"
