@@ -36,6 +36,8 @@ typedef __m128 vector_type;
 #error "Here's a nickel kid, buy yourself a real computer."
 #endif
 
+#define DEBUG_PRINTS 0
+
 enum measurement_point {
     MB_TOTAL_START, MB_TOTAL_END,
     MB_INIT_START, MB_INIT_END,
@@ -46,14 +48,18 @@ enum measurement_point {
     MB_MAX
 };
 
+#if DEBUG_PRINTS == 1
 static struct timespec mbt[MB_MAX];
 static long mba[MB_MAX] = {0};
+#endif
 
 static void update_timers(enum measurement_point p) {
+    #if DEBUG_PRINTS == 1
     clock_gettime(CLOCK_MONOTONIC, &mbt[p]);
     if (p % 2 == 1) {
         mba[p] += time_diff(&mbt[p - 1], &mbt[p]);
     }
+    #endif
 }
 
 inline float __attribute__((always_inline)) entity_distance(Celestial *a, Celestial *b) {
@@ -266,6 +272,7 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
 
     Route *route = new Route();
 
+    #if DEBUG_PRINTS == 1
     if (verbose >= 1) {
         unsigned long mba_total = 0;
 
@@ -279,6 +286,7 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, struct trip *parame
 
         fprintf(stderr, "\n");
     }
+    #endif
 
     route->loops = loops;
     route->cost = cost[dst->seq_id];

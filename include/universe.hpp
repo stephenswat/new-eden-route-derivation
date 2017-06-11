@@ -48,13 +48,13 @@ public:
     int group_id;
     System *system;
     Celestial *destination;
-} __attribute__ ((aligned(64)));
+};
 
 class System: public Entity {
 public:
     int entity_count;
     Celestial *entities, *gates;
-} __attribute__ ((aligned(64)));
+};
 
 class Universe {
 public:
