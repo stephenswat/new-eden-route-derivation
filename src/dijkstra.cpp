@@ -9,7 +9,6 @@
 #include <xmmintrin.h>
 #include <pmmintrin.h>
 
-#include "main.hpp"
 #include "dijkstra.hpp"
 #include "min_heap.hpp"
 #include "universe.hpp"
