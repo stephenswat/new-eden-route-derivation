@@ -251,7 +251,14 @@ void Dijkstra::update_administration(Celestial *a, Celestial *b, float ccost, en
 }
 
 Route *Dijkstra::get_route() {
+    if (!dst) throw 20;
+    return get_route(dst);
+}
+
+Route *Dijkstra::get_route(Celestial *dst) {
     solve_internal();
+
+    if (!vist[dst->seq_id]) throw 21;
 
     Route *route = new Route();
 
@@ -264,6 +271,8 @@ Route *Dijkstra::get_route() {
 
     return route;
 }
+
+
 
 std::map<Celestial *, float> *Dijkstra::get_all_distances() {
     solve_internal();
