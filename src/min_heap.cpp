@@ -25,6 +25,10 @@ template <class P, class V> MinHeap<P, V>::~MinHeap() {
     free(this->array);
 }
 
+template <class P, class V> bool MinHeap<P, V>::is_empty() {
+    return occupied == 0;
+}
+
 template <class P, class V> void MinHeap<P, V>::swap(V ia, V ib) {
     MinHeapElement<P, V> *a, *b, tmp;
 

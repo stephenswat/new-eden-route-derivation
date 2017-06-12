@@ -15,6 +15,7 @@ public:
     V extract();
     bool decrease(P, V);
     void decrease_raw(P, V);
+    bool is_empty();
 
 private:
     void swap(V, V);

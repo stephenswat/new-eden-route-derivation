@@ -98,7 +98,7 @@ Dijkstra::Dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *para
     }
 
     for (int i = 0; i < this->universe.entity_count; i++) {
-        if (!this->universe.entities[i].is_relevant() && this->universe.entities[i].seq_id != src->seq_id && (!dst || this->universe.entities[i].seq_id != dst->seq_id)) continue;
+        if (!celestial_is_relevant(this->universe.entities[i])) continue;
 
         vist[i] = i == src->seq_id ? 1 : 0;
         prev[i] = i == src->seq_id ? -2 : -1;
@@ -124,15 +124,15 @@ Dijkstra::~Dijkstra() {
     free(sys_z);
 }
 
+bool Dijkstra::celestial_is_relevant(Celestial &c) {
+    return c.is_relevant() || c.id == src->id || (dst && c.id == dst->id);
+}
+
 void Dijkstra::solve_w_set(Celestial *ent) {
     System *sys = ent->system;
 
     for (int i = 0; i < sys->entity_count; i++) {
-        if (!sys->entities[i].is_relevant() && sys->entities[i].seq_id != src->seq_id && (!dst || sys->entities[i].seq_id != dst->seq_id)) {
-            continue;
-        }
-
-        if (ent == &sys->entities[i]) {
+        if (!celestial_is_relevant(sys->entities[i]) || ent == &sys->entities[i]) {
             continue;
         }
 
@@ -200,7 +200,7 @@ void Dijkstra::solve_j_set(Celestial *ent) {
 
                 distance = sqrt(x_vec[i]) / LY_TO_M;
 
-                for (int j = ((!dst || jsys == dst->system) ? 0 : jsys->gates - jsys->entities); j < jsys->entity_count; j++) {
+                for (int j = ((dst && jsys != dst->system) ? jsys->gates - jsys->entities : 0); j < jsys->entity_count; j++) {
                     update_administration(ent, &jsys->entities[j], distance * (1 - parameters->jump_range_reduction), JUMP);
                 }
             }
@@ -208,7 +208,7 @@ void Dijkstra::solve_j_set(Celestial *ent) {
     }
 }
 
-void Dijkstra::update_administration(Celestial *src, Celestial *dst, float ccost, enum movement_type ctype) {
+void Dijkstra::update_administration(Celestial *a, Celestial *b, float ccost, enum movement_type ctype) {
     float dcost, cur_cost;
 
     if (ctype == JUMP) {
@@ -219,9 +219,9 @@ void Dijkstra::update_administration(Celestial *src, Celestial *dst, float ccost
         } else if (parameters->fatigue_model == FATIGUE_FATIGUE_COST) {
             dcost = 600 * ccost;
         } else if (parameters->fatigue_model == FATIGUE_REACTIVATION_COUNTDOWN) {
-            dcost = reactivation[src->seq_id] + 10.0;
+            dcost = reactivation[a->seq_id] + 10.0;
         } else if (parameters->fatigue_model == FATIGUE_FATIGUE_COUNTDOWN) {
-            dcost = fatigue[src->seq_id] + 10.0;
+            dcost = fatigue[a->seq_id] + 10.0;
         } else {
             dcost = INFINITY;
         }
@@ -229,22 +229,22 @@ void Dijkstra::update_administration(Celestial *src, Celestial *dst, float ccost
         dcost = ccost;
     }
 
-    cur_cost = cost[src->seq_id] + dcost;
+    cur_cost = cost[a->seq_id] + dcost;
 
-    if (cur_cost <= cost[dst->seq_id] && !vist[dst->seq_id]) {
+    if (cur_cost <= cost[b->seq_id] && !vist[b->seq_id]) {
         #pragma omp critical
         {
-            queue->decrease_raw(cur_cost, dst->seq_id);
-            prev[dst->seq_id] = src->seq_id;
-            cost[dst->seq_id] = cur_cost;
-            type[dst->seq_id] = ctype;
+            queue->decrease_raw(cur_cost, b->seq_id);
+            prev[b->seq_id] = a->seq_id;
+            cost[b->seq_id] = cur_cost;
+            type[b->seq_id] = ctype;
 
-            fatigue[dst->seq_id] = std::max(fatigue[src->seq_id] - dcost, 0.f);
-            reactivation[dst->seq_id] = std::max(reactivation[src->seq_id] - dcost, 0.f);
+            fatigue[b->seq_id] = std::max(fatigue[a->seq_id] - dcost, 0.f);
+            reactivation[b->seq_id] = std::max(reactivation[a->seq_id] - dcost, 0.f);
 
             if (ctype == JUMP) {
-                fatigue[dst->seq_id] = std::min(60*60*24*7.f, std::max(fatigue[src->seq_id], 600.f) * (ccost + 1));
-                reactivation[dst->seq_id] = std::max(fatigue[src->seq_id] / 600, 60 * (ccost + 1));
+                fatigue[b->seq_id] = std::min(60*60*24*7.f, std::max(fatigue[a->seq_id], 600.f) * (ccost + 1));
+                reactivation[b->seq_id] = std::max(fatigue[a->seq_id] / 600, 60 * (ccost + 1));
             }
         }
     }
@@ -268,17 +268,19 @@ Route *Dijkstra::get_route() {
 std::map<Celestial *, float> *Dijkstra::get_all_distances() {
     solve_internal();
 
+    std::map<Celestial *, float> *res = new std::map<Celestial *, float>();
+
     if (dst != NULL) throw 10;
+
+    return res;
 }
 
 void Dijkstra::solve_internal() {
     int tmp = -1;
-    int remaining = this->universe.entity_count;
-
     Celestial *ent;
 
     #pragma omp parallel num_threads(3)
-    while (remaining > 0 && (!dst || !vist[dst->seq_id]) && (tmp == -1 || !isinf(cost[tmp]))) {
+    while (!queue->is_empty() && (!dst || !vist[dst->seq_id]) && (tmp == -1 || !isinf(cost[tmp]))) {
         #pragma omp master
         {
             tmp = queue->extract();
@@ -286,21 +288,15 @@ void Dijkstra::solve_internal() {
             vist[tmp] = 1;
 
             solve_w_set(ent);
-
             solve_g_set(ent);
-
             solve_r_set(ent);
+
+            loops++;
         }
 
         #pragma omp barrier
 
         solve_j_set(ent);
-
-        #pragma omp master
-        {
-            remaining--;
-            loops++;
-        }
 
         #pragma omp barrier
     }
