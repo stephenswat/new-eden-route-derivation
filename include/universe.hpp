@@ -70,6 +70,9 @@ public:
     void add_dynamic_bridge(Celestial *, float);
     void add_dynamic_bridge(int, float);
 
+    void add_static_bridge(Celestial *, Celestial *);
+    void add_static_bridge(int, int);
+
     Route *route(int, int, Parameters *);
     Route *route(Celestial &, Celestial &, Parameters *);
 

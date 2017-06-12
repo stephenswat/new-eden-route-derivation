@@ -57,6 +57,23 @@ void Universe::add_dynamic_bridge(Celestial *src, float range) {
     if (src->system->gates > src) src->system->gates = src;
 }
 
+void Universe::add_static_bridge(int src, int dst) {
+    add_static_bridge(this->get_entity(src), this->get_entity(dst));
+}
+
+void Universe::add_static_bridge(Celestial *src, Celestial *dst) {
+    if (src->destination || dst->destination) {
+        throw 20;
+    }
+
+    src->destination = dst;
+    if (src->system->gates > src) src->system->gates = src;
+
+    dst->destination = src;
+    if (dst->system->gates > dst) dst->system->gates = dst;
+}
+
+
 void Universe::add_system(int id, char *name, double x, double y, double z, unsigned int entities) {
     int seq_id = this->system_count++;
     System *s = &(this->systems[seq_id]);
