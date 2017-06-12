@@ -10,6 +10,7 @@
 #include <pmmintrin.h>
 
 #include "main.hpp"
+#include "dijkstra.hpp"
 #include "min_heap.hpp"
 #include "universe.hpp"
 
@@ -88,204 +89,43 @@ double get_time(double distance, double v_wrp) {
     return cruise_time + t_accel + t_decel;
 }
 
-Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *parameters) {
-    update_timers(MB_TOTAL_START);
-    update_timers(MB_INIT_START);
+Dijkstra::Dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *parameters) : universe(u) {
+    this->src = src;
+    this->dst = dst;
+    this->parameters = parameters;
 
-    int *prev = (int *) malloc(u.entity_count * sizeof(int));
-    int *vist = (int *) malloc(u.entity_count * sizeof(int));
-    float *cost = (float *) malloc(u.entity_count * sizeof(float));
-    enum movement_type *type = (enum movement_type *) malloc(u.entity_count * sizeof(enum movement_type));
+    this->prev = (int *) malloc(this->universe.entity_count * sizeof(int));
+    this->vist = (int *) malloc(this->universe.entity_count * sizeof(int));
+    this->cost = (float *) malloc(this->universe.entity_count * sizeof(float));
+    this->type = (enum movement_type *) malloc(this->universe.entity_count * sizeof(enum movement_type));
 
-    float *sys_c = (float *) calloc(4 * (u.system_count + VECTOR_WIDTH), sizeof(float));
-    float *sys_x = (float *) calloc((u.system_count + VECTOR_WIDTH), sizeof(float));
-    float *sys_y = (float *) calloc((u.system_count + VECTOR_WIDTH), sizeof(float));
-    float *sys_z = (float *) calloc((u.system_count + VECTOR_WIDTH), sizeof(float));
+    this->sys_c = (float *) calloc(4 * (this->universe.system_count + VECTOR_WIDTH), sizeof(float));
+    this->sys_x = (float *) calloc((this->universe.system_count + VECTOR_WIDTH), sizeof(float));
+    this->sys_y = (float *) calloc((this->universe.system_count + VECTOR_WIDTH), sizeof(float));
+    this->sys_z = (float *) calloc((this->universe.system_count + VECTOR_WIDTH), sizeof(float));
 
-    MinHeap<float, int> queue(u.entity_count);
+    this->queue = new MinHeap<float, int>(u.entity_count);
 
-    float distance, cur_cost;
-
-    for (int i = 0; i < u.system_count; i++) {
-        _mm_store_ps(&sys_c[i * 4], u.systems[i].pos);
-        sys_x[i] = u.systems[i].pos[0];
-        sys_y[i] = u.systems[i].pos[1];
-        sys_z[i] = u.systems[i].pos[2];
+    for (int i = 0; i < this->universe.system_count; i++) {
+        _mm_store_ps(&sys_c[i * 4], this->universe.systems[i].pos);
+        sys_x[i] = this->universe.systems[i].pos[0];
+        sys_y[i] = this->universe.systems[i].pos[1];
+        sys_z[i] = this->universe.systems[i].pos[2];
     }
 
-    for (int i = 0; i < u.entity_count; i++) {
-        if (!u.entities[i].destination && u.entities[i].seq_id != src->seq_id && u.entities[i].seq_id != dst->seq_id) continue;
+    for (int i = 0; i < this->universe.entity_count; i++) {
+        if (!this->universe.entities[i].destination && this->universe.entities[i].seq_id != src->seq_id && this->universe.entities[i].seq_id != dst->seq_id) continue;
 
         vist[i] = i == src->seq_id ? 1 : 0;
         prev[i] = i == src->seq_id ? -2 : -1;
         type[i] = STRT;
         cost[i] = i == src->seq_id ? 0.0 : INFINITY;
 
-        queue.insert(cost[i], i);
+        queue->insert(cost[i], i);
     }
+}
 
-    int tmp, v;
-    int loops = 0;
-    float sqjr = pow(parameters->jump_range * LY_TO_M, 2.0);
-
-    vector_type x_vec, y_vec, z_vec;
-    vector_type x_src_vec, y_src_vec, z_src_vec;
-
-    System *sys, *jsys;
-    Celestial *ent;
-
-    tmp = queue.extract();
-
-    int remaining = u.entity_count;
-
-    update_timers(MB_INIT_END);
-
-    #pragma omp parallel private(v, cur_cost, jsys, distance, x_vec, y_vec, z_vec) num_threads(3)
-    while (remaining > 0 && tmp != dst->seq_id && !isinf(cost[tmp])) {
-        #pragma omp master
-        {
-            update_timers(MB_SYSTEM_START);
-            ent = &u.entities[tmp];
-            sys = ent->system;
-            vist[tmp] = 1;
-
-            // System set
-            for (int i = 0; i < sys->entity_count; i++) {
-                if (!sys->entities[i].destination && sys->entities[i].seq_id != src->seq_id && sys->entities[i].seq_id != dst->seq_id) {
-                    continue;
-                }
-
-                if (tmp == sys->entities[i].seq_id) {
-                    continue;
-                }
-
-                v = sys->entities[i].seq_id;
-                cur_cost = cost[tmp] + parameters->align_time + get_time(entity_distance(ent, &sys->entities[i]), parameters->warp_speed);
-
-                if (cur_cost <= cost[v] && !vist[v]) {
-                    queue.decrease_raw(cur_cost, v);
-                    prev[v] = tmp;
-                    cost[v] = cur_cost;
-                    type[v] = WARP;
-                }
-            }
-            update_timers(MB_SYSTEM_END);
-
-            update_timers(MB_GATE_START);
-            // Gate set
-            if (ent->destination && parameters->gate_cost >= 0.0) {
-                v = ent->destination->seq_id;
-                cur_cost = cost[tmp] + parameters->gate_cost;
-
-                if (cur_cost <= cost[v] && !vist[v]) {
-                    queue.decrease_raw(cur_cost, v);
-                    prev[v] = tmp;
-                    cost[v] = cur_cost;
-                    type[v] = GATE;
-                }
-            }
-            update_timers(MB_GATE_END);
-
-            update_timers(MB_JUMP_START);
-
-            #if VECTOR_WIDTH == 4
-            x_src_vec = _mm_set1_ps(sys->pos[0]);
-            y_src_vec = _mm_set1_ps(sys->pos[1]);
-            z_src_vec = _mm_set1_ps(sys->pos[2]);
-            #elif VECTOR_WIDTH == 8
-            x_src_vec = _mm256_set1_ps(sys->pos[0]);
-            y_src_vec = _mm256_set1_ps(sys->pos[1]);
-            z_src_vec = _mm256_set1_ps(sys->pos[2]);
-            #endif
-        }
-
-        // Jump set
-        if (!isnan(parameters->jump_range)) {
-            #pragma omp for schedule(guided)
-            for (int k = 0; k < u.system_count; k += VECTOR_WIDTH) {
-                #if VECTOR_WIDTH == 4
-                x_vec = _mm_load_ps(sys_x + k);
-                y_vec = _mm_load_ps(sys_y + k);
-                z_vec = _mm_load_ps(sys_z + k);
-                #elif VECTOR_WIDTH == 8
-                x_vec = _mm256_loadu_ps(sys_x + k);
-                y_vec = _mm256_loadu_ps(sys_y + k);
-                z_vec = _mm256_loadu_ps(sys_z + k);
-                #endif
-
-                x_vec -= x_src_vec;
-                y_vec -= y_src_vec;
-                z_vec -= z_src_vec;
-
-                x_vec = (x_vec * x_vec) + (y_vec * y_vec) + (z_vec * z_vec);
-
-                for (int i = 0; i < VECTOR_WIDTH; i++) {
-                    if (x_vec[i] > sqjr || sys->id == u.systems[i].id) continue;
-
-                    jsys = u.systems + k + i;
-                    distance = sqrt(x_vec[i]) / LY_TO_M;
-
-                    for (int j = jsys->gates - jsys->entities; j < jsys->entity_count; j++) {
-                        if (!jsys->entities[j].destination && ((jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id))) continue;
-
-                        v = jsys->entities[j].seq_id;
-                        cur_cost = cost[tmp] + 60 * (distance + 1);
-
-                        if (cur_cost <= cost[v] && !vist[v]) {
-                            #pragma omp critical
-                            {
-                                queue.decrease_raw(cur_cost, v);
-                                prev[v] = tmp;
-                                cost[v] = cur_cost;
-                                type[v] = JUMP;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        #pragma omp master
-        {
-            update_timers(MB_JUMP_END);
-
-            update_timers(MB_SELECT_START);
-            remaining--;
-            loops++;
-            tmp = queue.extract();
-            update_timers(MB_SELECT_END);
-        }
-
-        #pragma omp barrier
-    }
-
-    update_timers(MB_TOTAL_END);
-
-    Route *route = new Route();
-
-    #if DEBUG_PRINTS == 1
-    if (verbose >= 1) {
-        unsigned long mba_total = 0;
-
-        for (int i = 3; i < MB_MAX; i += 2) {
-            mba_total += mba[i];
-        }
-
-        for (int i = 1; i < MB_MAX; i += 2) {
-            fprintf(stderr, "%0.3f ms (%.1f%%), ", mba[i] / 1000000.0, (mba[i] / (double) mba_total) * 100);
-        }
-
-        fprintf(stderr, "\n");
-    }
-    #endif
-
-    route->loops = loops;
-    route->cost = cost[dst->seq_id];
-
-    for (int c = dst->seq_id; c != -2; c = prev[c]) {
-        route->points.push_front((struct waypoint) {&u.entities[c], type[c]});
-    }
-
+Dijkstra::~Dijkstra() {
     free(prev);
     free(cost);
     free(vist);
@@ -295,6 +135,161 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *paramet
     free(sys_x);
     free(sys_y);
     free(sys_z);
+}
+
+void Dijkstra::solve_w_set(Celestial *ent) {
+    System *sys = ent->system;
+
+    for (int i = 0; i < sys->entity_count; i++) {
+        if (!sys->entities[i].destination && sys->entities[i].seq_id != src->seq_id && sys->entities[i].seq_id != dst->seq_id) {
+            continue;
+        }
+
+        if (ent == &sys->entities[i]) {
+            continue;
+        }
+
+        update_administration(ent, &sys->entities[i], parameters->align_time + get_time(entity_distance(ent, &sys->entities[i]), parameters->warp_speed), WARP);
+    }
+}
+
+void Dijkstra::solve_g_set(Celestial *ent) {
+    if (ent->destination && parameters->gate_cost >= 0.0) {
+        update_administration(ent, ent->destination, parameters->gate_cost, GATE);
+    }
+}
+
+void Dijkstra::solve_j_set(Celestial *ent) {
+    vector_type x_vec, y_vec, z_vec;
+    vector_type x_src_vec, y_src_vec, z_src_vec;
+
+    System *jsys, *sys = ent->system;
+
+    float distance;
+    float sqjr = pow(parameters->jump_range * LY_TO_M, 2.0);
+
+    #if VECTOR_WIDTH == 4
+    x_src_vec = _mm_set1_ps(sys->pos[0]);
+    y_src_vec = _mm_set1_ps(sys->pos[1]);
+    z_src_vec = _mm_set1_ps(sys->pos[2]);
+    #elif VECTOR_WIDTH == 8
+    x_src_vec = _mm256_set1_ps(sys->pos[0]);
+    y_src_vec = _mm256_set1_ps(sys->pos[1]);
+    z_src_vec = _mm256_set1_ps(sys->pos[2]);
+    #endif
+
+    if (!isnan(parameters->jump_range)) {
+        #pragma omp for schedule(guided)
+        for (int k = 0; k < this->universe.system_count; k += VECTOR_WIDTH) {
+            #if VECTOR_WIDTH == 4
+            x_vec = _mm_load_ps(sys_x + k);
+            y_vec = _mm_load_ps(sys_y + k);
+            z_vec = _mm_load_ps(sys_z + k);
+            #elif VECTOR_WIDTH == 8
+            x_vec = _mm256_loadu_ps(sys_x + k);
+            y_vec = _mm256_loadu_ps(sys_y + k);
+            z_vec = _mm256_loadu_ps(sys_z + k);
+            #endif
+
+            x_vec -= x_src_vec;
+            y_vec -= y_src_vec;
+            z_vec -= z_src_vec;
+
+            x_vec = (x_vec * x_vec) + (y_vec * y_vec) + (z_vec * z_vec);
+
+            for (int i = 0; i < VECTOR_WIDTH; i++) {
+                if (x_vec[i] > sqjr || sys->id == this->universe.systems[i].id || k + i >= this->universe.system_count) continue;
+
+                jsys = this->universe.systems + k + i;
+                distance = sqrt(x_vec[i]) / LY_TO_M;
+
+                for (int j = jsys->gates - jsys->entities; j < jsys->entity_count; j++) {
+                    if (!jsys->entities[j].destination && ((jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id))) continue;
+
+                    update_administration(ent, &jsys->entities[j], 60 * (distance + 1), JUMP);
+                }
+            }
+        }
+    }
+}
+
+void Dijkstra::update_administration(Celestial *src, Celestial *dst, float ccost, enum movement_type ctype) {
+    float cur_cost = cost[src->seq_id] + ccost;
+
+    if (cur_cost <= cost[dst->seq_id] && !vist[dst->seq_id]) {
+        #pragma omp critical
+        {
+            queue->decrease_raw(cur_cost, dst->seq_id);
+            prev[dst->seq_id] = src->seq_id;
+            cost[dst->seq_id] = cur_cost;
+            type[dst->seq_id] = ctype;
+        }
+    }
+}
+
+Route *Dijkstra::get_route() {
+    Route *route = new Route();
+
+    route->loops = loops;
+    route->cost = cost[dst->seq_id];
+
+    for (int c = dst->seq_id; c != -2; c = prev[c]) {
+        route->points.push_front((struct waypoint) {&this->universe.entities[c], type[c]});
+    }
 
     return route;
+}
+
+void Dijkstra::solve_internal() {
+    update_timers(MB_TOTAL_START);
+    update_timers(MB_INIT_START);
+
+    int tmp = -1;
+    int remaining = this->universe.entity_count;
+
+    Celestial *ent;
+
+    update_timers(MB_INIT_END);
+
+    #pragma omp parallel num_threads(3)
+    while (remaining > 0 && tmp != dst->seq_id && (tmp == -1 || !isinf(cost[tmp]))) {
+        #pragma omp master
+        {
+            update_timers(MB_SELECT_START);
+            tmp = queue->extract();
+            ent = &this->universe.entities[tmp];
+            vist[tmp] = 1;
+            update_timers(MB_SELECT_END);
+
+            update_timers(MB_SYSTEM_START);
+            solve_w_set(ent);
+            update_timers(MB_SYSTEM_END);
+
+            update_timers(MB_GATE_START);
+            solve_g_set(ent);
+            update_timers(MB_GATE_END);
+
+            update_timers(MB_JUMP_START);
+        }
+
+        #pragma omp barrier
+
+        solve_j_set(ent);
+
+        #pragma omp master
+        {
+            update_timers(MB_JUMP_END);
+            remaining--;
+            loops++;
+        }
+
+        #pragma omp barrier
+    }
+
+    update_timers(MB_TOTAL_END);
+}
+
+Route *Dijkstra::solve() {
+    solve_internal();
+    return get_route();
 }

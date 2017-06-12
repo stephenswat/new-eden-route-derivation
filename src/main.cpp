@@ -125,7 +125,7 @@ void run_batch_experiment(Universe &u, FILE *f) {
         src_e = u.get_entity(src);
         dst_e = u.get_entity(dst);
 
-        route = dijkstra(u, src_e, dst_e, &parameters);
+        route = Dijkstra(u, src_e, dst_e, &parameters).solve();
 
         free(route);
     } while (res != EOF);
@@ -195,7 +195,7 @@ void run_route(Universe &u, int src_id, int dst_id, Parameters *param) {
 
     std::cout << "Routing from " << src->name << " to " << dst->name << "...\n";
 
-    Route *route = dijkstra(u, src, dst, param);
+    Route *route = Dijkstra(u, src, dst, param).solve();
 
     fprintf(stderr, "Travel time: %u minutes, %02u seconds (%lu steps)\n", ((int) route->cost) / 60, ((int) route->cost) % 60, route->points.size());
     fprintf(stderr, "Route: \n");

@@ -44,7 +44,7 @@ Route *Universe::route(int src_id, int dst_id, Parameters *param) {
 }
 
 Route *Universe::route(Celestial &src, Celestial &dst, Parameters *param) {
-    return dijkstra(*this, &src, &dst, param);
+    return Dijkstra(*this, &src, &dst, param).solve();
 }
 
 void Universe::add_system(int id, char *name, double x, double y, double z, unsigned int entities) {
