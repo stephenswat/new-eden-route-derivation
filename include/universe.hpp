@@ -56,6 +56,7 @@ class System: public Entity {
 public:
     int entity_count;
     Celestial *entities, *gates;
+    float security;
 };
 
 class Universe {
@@ -64,7 +65,7 @@ public:
     Universe(std::string, std::string);
     ~Universe();
 
-    void add_system(int, char *, double, double, double, unsigned int);
+    void add_system(int, char *, double, double, double, unsigned int, float);
     Celestial *add_entity(int, int, enum entity_type, char *, double, double, double, Celestial *);
 
     void add_dynamic_bridge(Celestial *, float);

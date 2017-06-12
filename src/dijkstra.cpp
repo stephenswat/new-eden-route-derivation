@@ -207,9 +207,11 @@ void Dijkstra::solve_j_set(Celestial *ent) {
             x_vec = (x_vec * x_vec) + (y_vec * y_vec) + (z_vec * z_vec);
 
             for (int i = 0; i < VECTOR_WIDTH; i++) {
-                if (x_vec[i] > range_sq || sys->id == this->universe.systems[i + k].id || k + i >= this->universe.system_count) continue;
+                if (x_vec[i] > range_sq ||
+                    k + i >= this->universe.system_count ||
+                    sys == (jsys = this->universe.systems + i + k) ||
+                    jsys->security >= 0.5) continue;
 
-                jsys = this->universe.systems + k + i;
                 distance = sqrt(x_vec[i]) / LY_TO_M;
 
                 for (int j = (jsys == dst->system ? 0 : jsys->gates - jsys->entities); j < jsys->entity_count; j++) {

@@ -74,7 +74,7 @@ void Universe::add_static_bridge(Celestial *src, Celestial *dst) {
 }
 
 
-void Universe::add_system(int id, char *name, double x, double y, double z, unsigned int entities) {
+void Universe::add_system(int id, char *name, double x, double y, double z, unsigned int entities, float security) {
     int seq_id = this->system_count++;
     System *s = &(this->systems[seq_id]);
     this->system_map[id] = seq_id;
@@ -88,6 +88,8 @@ void Universe::add_system(int id, char *name, double x, double y, double z, unsi
     s->pos[1] = y;
     s->pos[2] = z;
     s->pos[3] = 0.0;
+
+    s->security = security;
 
     s->gates = NULL;
     s->entities = this->last_entity;
@@ -176,7 +178,7 @@ void Universe::load_systems_and_entities(FILE *f) {
                 }
             } else {
                 if (id >= 30000000 && id < 40000000) {
-                    this->add_system(id, name, x, y, z, per_system_entities[id]);
+                    this->add_system(id, name, x, y, z, per_system_entities[id], atof(security));
                 } else if (id >= 40000000 && id < 50000000) {
                     ent = this->add_entity(system_id, id, CELESTIAL, name, x, y, z, NULL);
                     ent->group_id = group_id;
