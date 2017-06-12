@@ -27,7 +27,7 @@ enum fatigue_model {
 
 class Parameters {
 public:
-    Parameters(double w, double a, double g, double j, double r) {
+    Parameters(float w, float a, float g, float j, float r) {
         this->warp_speed = w;
         this->align_time = a;
         this->gate_cost = g;
@@ -35,20 +35,20 @@ public:
         this->jump_range_reduction = r;
     }
 
-    Parameters(double w, double a, double g, double j) {
+    Parameters(float w, float a, float g, float j) {
         this->warp_speed = w;
         this->align_time = a;
         this->gate_cost = g;
         this->jump_range = j;
     }
 
-    Parameters(double w, double a, double g) {
+    Parameters(float w, float a, float g) {
         this->warp_speed = w;
         this->align_time = a;
         this->gate_cost = g;
     }
 
-    double jump_range = NAN, warp_speed, align_time = 0.0, gate_cost, jump_range_reduction = 0.0;
+    float jump_range = NAN, warp_speed, align_time = 0.0, gate_cost, jump_range_reduction = 0.0;
     enum fatigue_model fatigue_model = FATIGUE_REACTIVATION_COUNTDOWN;
 };
 
