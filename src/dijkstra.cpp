@@ -290,7 +290,11 @@ Route *dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *paramet
     free(cost);
     free(vist);
     free(type);
+
     free(sys_c);
+    free(sys_x);
+    free(sys_y);
+    free(sys_z);
 
     return route;
 }

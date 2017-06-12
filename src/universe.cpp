@@ -210,6 +210,16 @@ Universe::Universe(FILE *entities, FILE *gates) {
 }
 
 Universe::~Universe() {
+    for (int i = 0; i < this->entity_count; i++) {
+        this->entities[i].name.clear();
+        this->entities[i].name.shrink_to_fit();
+    }
+
+    for (int i = 0; i < this->system_count; i++) {
+        this->systems[i].name.clear();
+        this->systems[i].name.shrink_to_fit();
+    }
+
     free(this->entities);
     free(this->systems);
 }
