@@ -215,7 +215,7 @@ void Dijkstra::solve_j_set(Celestial *ent) {
                 distance = sqrt(x_vec[i]) / LY_TO_M;
 
                 for (int j = (jsys == dst->system ? 0 : jsys->gates - jsys->entities); j < jsys->entity_count; j++) {
-                    update_administration(ent, &jsys->entities[j], distance, JUMP);
+                    update_administration(ent, &jsys->entities[j], distance * (1 - parameters->jump_range_reduction), JUMP);
                 }
             }
         }
