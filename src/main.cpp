@@ -125,7 +125,7 @@ void run_batch_experiment(Universe &u, FILE *f) {
         src_e = u.get_entity(src);
         dst_e = u.get_entity(dst);
 
-        route = Dijkstra(u, src_e, dst_e, &parameters).solve();
+        route = Dijkstra(u, src_e, dst_e, &parameters).get_route();
 
         free(route);
     } while (res != EOF);
@@ -145,7 +145,7 @@ void run_user_interface(Universe &universe) {
         } else if (strcmp(pch, "route") == 0) {
             int s = atoi(strtok(NULL, " "));
             int d = atoi(strtok(NULL, " "));
-            universe.route(s, d, &parameters);
+            universe.get_route(s, d, &parameters);
         } else if (strcmp(pch, "parameters") == 0) {
             fprintf(stderr, "Jump drive: %.1f LY\n", parameters.jump_range);
             fprintf(stderr, "Warp speed: %.1f AU/s\n", parameters.warp_speed);
@@ -195,7 +195,7 @@ void run_route(Universe &u, int src_id, int dst_id, Parameters *param) {
 
     std::cout << "Routing from " << src->name << " to " << dst->name << "...\n";
 
-    Route *route = Dijkstra(u, src, dst, param).solve();
+    Route *route = Dijkstra(u, src, dst, param).get_route();
 
     fprintf(stderr, "Travel time: %u minutes, %02u seconds (%lu steps)\n", ((int) route->cost) / 60, ((int) route->cost) % 60, route->points.size());
     fprintf(stderr, "Route: \n");

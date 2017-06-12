@@ -75,8 +75,8 @@ public:
     void add_static_bridge(Celestial *, Celestial *);
     void add_static_bridge(int, int);
 
-    Route *route(int, int, Parameters *);
-    Route *route(Celestial &, Celestial &, Parameters *);
+    Route *get_route(int, int, Parameters *);
+    Route *get_route(Celestial &, Celestial &, Parameters *);
 
     Celestial *get_entity(int);
     System *get_system(int);

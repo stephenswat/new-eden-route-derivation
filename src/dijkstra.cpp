@@ -277,6 +277,8 @@ void Dijkstra::update_administration(Celestial *src, Celestial *dst, float ccost
 }
 
 Route *Dijkstra::get_route() {
+    solve_internal();
+    
     Route *route = new Route();
 
     route->loops = loops;
@@ -338,9 +340,4 @@ void Dijkstra::solve_internal() {
     }
 
     update_timers(MB_TOTAL_END);
-}
-
-Route *Dijkstra::solve() {
-    solve_internal();
-    return get_route();
 }
