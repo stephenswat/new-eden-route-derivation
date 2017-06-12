@@ -78,6 +78,9 @@ public:
     Route *get_route(int, int, Parameters *);
     Route *get_route(Celestial &, Celestial &, Parameters *);
 
+    std::map<Celestial *, float> *get_all_distances(int, Parameters *);
+    std::map<Celestial *, float> *get_all_distances(Celestial &, Parameters *);
+
     Celestial *get_entity(int);
     System *get_system(int);
     Celestial *get_entity_or_default(int);

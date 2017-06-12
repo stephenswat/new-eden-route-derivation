@@ -51,6 +51,17 @@ Route *Universe::get_route(Celestial &src, Celestial &dst, Parameters *param) {
     return Dijkstra(*this, &src, &dst, param).get_route();
 }
 
+std::map<Celestial *, float> *Universe::get_all_distances(int src_id, Parameters *param) {
+    return this->get_all_distances(
+        *this->get_entity_or_default(src_id),
+        param
+    );
+}
+
+std::map<Celestial *, float> *Universe::get_all_distances(Celestial &src, Parameters *param) {
+    return Dijkstra(*this, &src, NULL, param).get_all_distances();
+}
+
 void Universe::add_dynamic_bridge(int src, float range) {
     add_dynamic_bridge(this->get_entity(src), range);
 }

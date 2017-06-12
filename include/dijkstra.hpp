@@ -9,6 +9,7 @@ public:
     ~Dijkstra();
 
     Route *get_route();
+    std::map<Celestial *, float> *get_all_distances();
 
 private:
     void solve_w_set(Celestial *);

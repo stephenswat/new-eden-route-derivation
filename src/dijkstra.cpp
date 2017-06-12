@@ -124,7 +124,7 @@ Dijkstra::Dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *para
     }
 
     for (int i = 0; i < this->universe.entity_count; i++) {
-        if (!this->universe.entities[i].is_relevant() && this->universe.entities[i].seq_id != src->seq_id && this->universe.entities[i].seq_id != dst->seq_id) continue;
+        if (!this->universe.entities[i].is_relevant() && this->universe.entities[i].seq_id != src->seq_id && (!dst || this->universe.entities[i].seq_id != dst->seq_id)) continue;
 
         vist[i] = i == src->seq_id ? 1 : 0;
         prev[i] = i == src->seq_id ? -2 : -1;
@@ -154,7 +154,7 @@ void Dijkstra::solve_w_set(Celestial *ent) {
     System *sys = ent->system;
 
     for (int i = 0; i < sys->entity_count; i++) {
-        if (!sys->entities[i].is_relevant() && sys->entities[i].seq_id != src->seq_id && sys->entities[i].seq_id != dst->seq_id) {
+        if (!sys->entities[i].is_relevant() && sys->entities[i].seq_id != src->seq_id && (!dst || sys->entities[i].seq_id != dst->seq_id)) {
             continue;
         }
 
@@ -226,7 +226,7 @@ void Dijkstra::solve_j_set(Celestial *ent) {
 
                 distance = sqrt(x_vec[i]) / LY_TO_M;
 
-                for (int j = (jsys == dst->system ? 0 : jsys->gates - jsys->entities); j < jsys->entity_count; j++) {
+                for (int j = ((!dst || jsys == dst->system) ? 0 : jsys->gates - jsys->entities); j < jsys->entity_count; j++) {
                     update_administration(ent, &jsys->entities[j], distance * (1 - parameters->jump_range_reduction), JUMP);
                 }
             }
@@ -278,7 +278,7 @@ void Dijkstra::update_administration(Celestial *src, Celestial *dst, float ccost
 
 Route *Dijkstra::get_route() {
     solve_internal();
-    
+
     Route *route = new Route();
 
     route->loops = loops;
@@ -289,6 +289,12 @@ Route *Dijkstra::get_route() {
     }
 
     return route;
+}
+
+std::map<Celestial *, float> *Dijkstra::get_all_distances() {
+    solve_internal();
+
+    if (dst != NULL) throw 10;
 }
 
 void Dijkstra::solve_internal() {
@@ -303,7 +309,7 @@ void Dijkstra::solve_internal() {
     update_timers(MB_INIT_END);
 
     #pragma omp parallel num_threads(3)
-    while (remaining > 0 && tmp != dst->seq_id && (tmp == -1 || !isinf(cost[tmp]))) {
+    while (remaining > 0 && (!dst || !vist[dst->seq_id]) && (tmp == -1 || !isinf(cost[tmp]))) {
         #pragma omp master
         {
             update_timers(MB_SELECT_START);
