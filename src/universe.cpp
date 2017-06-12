@@ -62,14 +62,14 @@ void Universe::add_static_bridge(int src, int dst) {
 }
 
 void Universe::add_static_bridge(Celestial *src, Celestial *dst) {
-    if (src->destination || dst->destination) {
+    if (src->bridge || dst->bridge) {
         throw 20;
     }
 
-    src->destination = dst;
+    src->bridge = dst;
     if (src->system->gates > src) src->system->gates = src;
 
-    dst->destination = src;
+    dst->bridge = src;
     if (dst->system->gates > dst) dst->system->gates = dst;
 }
 
@@ -128,6 +128,7 @@ Celestial *Universe::add_entity(int system, int id, enum entity_type type, char 
 
     e->system = s;
     e->jump_range = NAN;
+    e->bridge = NULL;
 
     e->type = type;
     e->destination = destination;

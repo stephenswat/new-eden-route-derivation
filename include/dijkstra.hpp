@@ -14,7 +14,9 @@ private:
     void solve_w_set(Celestial *);
     void solve_g_set(Celestial *);
     void solve_j_set(Celestial *);
+    void solve_r_set(Celestial *);
     void solve_internal();
+    
     void update_administration(Celestial *, Celestial *, float, enum movement_type);
     Route *get_route();
 

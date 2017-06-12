@@ -63,6 +63,14 @@ inline float __attribute__((always_inline)) entity_distance(Celestial *a, Celest
     return sqrt(dx * dx + dy * dy + dz * dz);
 }
 
+inline float __attribute__((always_inline)) system_distance(System *a, System *b) {
+    float dx = a->pos[0] - b->pos[0];
+    float dy = a->pos[1] - b->pos[1];
+    float dz = a->pos[2] - b->pos[2];
+
+    return sqrt(dx * dx + dy * dy + dz * dz);
+}
+
 double get_time(double distance, double v_wrp) {
     double k_accel = v_wrp;
     double k_decel = (v_wrp / 3) < 2 ? (v_wrp / 3) : 2;
@@ -159,9 +167,14 @@ void Dijkstra::solve_w_set(Celestial *ent) {
 }
 
 void Dijkstra::solve_g_set(Celestial *ent) {
-    // This should account for fatigue when a bridge is taken
     if (ent->destination && parameters->gate_cost >= 0.0) {
         update_administration(ent, ent->destination, parameters->gate_cost, GATE);
+    }
+}
+
+void Dijkstra::solve_r_set(Celestial *ent) {
+    if (ent->bridge && isnan(parameters->jump_range)) {
+        update_administration(ent, ent->bridge, system_distance(ent->system, ent->bridge->system) * (1 - parameters->jump_range_reduction), JUMP);
     }
 }
 
@@ -304,6 +317,8 @@ void Dijkstra::solve_internal() {
             update_timers(MB_GATE_START);
             solve_g_set(ent);
             update_timers(MB_GATE_END);
+
+            solve_r_set(ent);
 
             update_timers(MB_JUMP_START);
         }

@@ -45,10 +45,11 @@ public:
     int group_id;
     System *system;
     Celestial *destination;
+    Celestial *bridge;
     float jump_range;
 
     bool is_relevant() {
-        return this->destination != NULL || !isnan(this->jump_range);
+        return this->destination || this->bridge || !isnan(this->jump_range);
     }
 };
 
