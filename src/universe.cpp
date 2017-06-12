@@ -47,6 +47,16 @@ Route *Universe::route(Celestial &src, Celestial &dst, Parameters *param) {
     return Dijkstra(*this, &src, &dst, param).solve();
 }
 
+void Universe::add_dynamic_bridge(int src, float range) {
+    add_dynamic_bridge(this->get_entity(src), range);
+}
+
+void Universe::add_dynamic_bridge(Celestial *src, float range) {
+    src->jump_range = range;
+
+    if (src->system->gates > src) src->system->gates = src;
+}
+
 void Universe::add_system(int id, char *name, double x, double y, double z, unsigned int entities) {
     int seq_id = this->system_count++;
     System *s = &(this->systems[seq_id]);
@@ -98,6 +108,7 @@ Celestial *Universe::add_entity(int system, int id, enum entity_type type, char 
     e->pos[3] = 0.0;
 
     e->system = s;
+    e->jump_range = NAN;
 
     e->type = type;
     e->destination = destination;

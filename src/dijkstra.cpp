@@ -117,7 +117,7 @@ Dijkstra::Dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *para
     }
 
     for (int i = 0; i < this->universe.entity_count; i++) {
-        if (!this->universe.entities[i].destination && this->universe.entities[i].seq_id != src->seq_id && this->universe.entities[i].seq_id != dst->seq_id) continue;
+        if (!this->universe.entities[i].is_relevant() && this->universe.entities[i].seq_id != src->seq_id && this->universe.entities[i].seq_id != dst->seq_id) continue;
 
         vist[i] = i == src->seq_id ? 1 : 0;
         prev[i] = i == src->seq_id ? -2 : -1;
@@ -147,7 +147,7 @@ void Dijkstra::solve_w_set(Celestial *ent) {
     System *sys = ent->system;
 
     for (int i = 0; i < sys->entity_count; i++) {
-        if (!sys->entities[i].destination && sys->entities[i].seq_id != src->seq_id && sys->entities[i].seq_id != dst->seq_id) {
+        if (!sys->entities[i].is_relevant() && sys->entities[i].seq_id != src->seq_id && sys->entities[i].seq_id != dst->seq_id) {
             continue;
         }
 
@@ -172,7 +172,7 @@ void Dijkstra::solve_j_set(Celestial *ent) {
     System *jsys, *sys = ent->system;
 
     float distance;
-    float sqjr = pow(parameters->jump_range * LY_TO_M, 2.0);
+    float range, range_sq;
 
     #if VECTOR_WIDTH == 4
     x_src_vec = _mm_set1_ps(sys->pos[0]);
@@ -184,7 +184,9 @@ void Dijkstra::solve_j_set(Celestial *ent) {
     z_src_vec = _mm256_set1_ps(sys->pos[2]);
     #endif
 
-    if (!isnan(parameters->jump_range)) {
+    if (!isnan((range = parameters->jump_range)) || !isnan((range = ent->jump_range))) {
+        range_sq = pow(range * LY_TO_M, 2.0);
+
         #pragma omp for schedule(guided)
         for (int k = 0; k < this->universe.system_count; k += VECTOR_WIDTH) {
             #if VECTOR_WIDTH == 4
@@ -204,7 +206,7 @@ void Dijkstra::solve_j_set(Celestial *ent) {
             x_vec = (x_vec * x_vec) + (y_vec * y_vec) + (z_vec * z_vec);
 
             for (int i = 0; i < VECTOR_WIDTH; i++) {
-                if (x_vec[i] > sqjr || sys->id == this->universe.systems[i + k].id || k + i >= this->universe.system_count) continue;
+                if (x_vec[i] > range_sq || sys->id == this->universe.systems[i + k].id || k + i >= this->universe.system_count) continue;
 
                 jsys = this->universe.systems + k + i;
                 distance = sqrt(x_vec[i]) / LY_TO_M;

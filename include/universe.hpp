@@ -45,6 +45,11 @@ public:
     int group_id;
     System *system;
     Celestial *destination;
+    float jump_range;
+
+    bool is_relevant() {
+        return this->destination != NULL || !isnan(this->jump_range);
+    }
 };
 
 class System: public Entity {
@@ -58,13 +63,20 @@ public:
     Universe(FILE *, FILE *);
     Universe(std::string, std::string);
     ~Universe();
+
     void add_system(int, char *, double, double, double, unsigned int);
     Celestial *add_entity(int, int, enum entity_type, char *, double, double, double, Celestial *);
+
+    void add_dynamic_bridge(Celestial *, float);
+    void add_dynamic_bridge(int, float);
+
     Route *route(int, int, Parameters *);
     Route *route(Celestial &, Celestial &, Parameters *);
+
     Celestial *get_entity(int);
     System *get_system(int);
     Celestial *get_entity_or_default(int);
+
     int system_count = 0, entity_count = 0, stargate_count = 0;
     System *systems;
     Celestial *entities;
