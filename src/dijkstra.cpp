@@ -209,9 +209,7 @@ void Dijkstra::solve_j_set(Celestial *ent) {
                 jsys = this->universe.systems + k + i;
                 distance = sqrt(x_vec[i]) / LY_TO_M;
 
-                for (int j = jsys->gates - jsys->entities; j < jsys->entity_count; j++) {
-                    if (!jsys->entities[j].destination && ((jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id))) continue;
-
+                for (int j = (jsys == dst->system ? 0 : jsys->gates - jsys->entities); j < jsys->entity_count; j++) {
                     update_administration(ent, &jsys->entities[j], distance, JUMP);
                 }
             }
