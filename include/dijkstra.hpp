@@ -23,7 +23,7 @@ private:
     Parameters *parameters;
 
     float *sys_c, *sys_x, *sys_y, *sys_z;
-    float *cost;
+    float *cost, *fatigue, *reactivation;
     enum movement_type *type;
     int *prev, *vist;
 

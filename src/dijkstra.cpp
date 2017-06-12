@@ -104,6 +104,9 @@ Dijkstra::Dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *para
     this->sys_y = (float *) calloc((this->universe.system_count + VECTOR_WIDTH), sizeof(float));
     this->sys_z = (float *) calloc((this->universe.system_count + VECTOR_WIDTH), sizeof(float));
 
+    this->fatigue = (float *) calloc(this->universe.entity_count, sizeof(float));
+    this->reactivation = (float *) calloc(this->universe.entity_count, sizeof(float));
+
     this->queue = new MinHeap<float, int>(u.entity_count);
 
     for (int i = 0; i < this->universe.system_count; i++) {
@@ -120,6 +123,9 @@ Dijkstra::Dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *para
         prev[i] = i == src->seq_id ? -2 : -1;
         type[i] = STRT;
         cost[i] = i == src->seq_id ? 0.0 : INFINITY;
+
+        fatigue[i] = 0.0;
+        reactivation[i] = 0.0;
 
         queue->insert(cost[i], i);
     }
@@ -198,7 +204,7 @@ void Dijkstra::solve_j_set(Celestial *ent) {
             x_vec = (x_vec * x_vec) + (y_vec * y_vec) + (z_vec * z_vec);
 
             for (int i = 0; i < VECTOR_WIDTH; i++) {
-                if (x_vec[i] > sqjr || sys->id == this->universe.systems[i].id || k + i >= this->universe.system_count) continue;
+                if (x_vec[i] > sqjr || sys->id == this->universe.systems[i + k].id || k + i >= this->universe.system_count) continue;
 
                 jsys = this->universe.systems + k + i;
                 distance = sqrt(x_vec[i]) / LY_TO_M;
@@ -206,7 +212,7 @@ void Dijkstra::solve_j_set(Celestial *ent) {
                 for (int j = jsys->gates - jsys->entities; j < jsys->entity_count; j++) {
                     if (!jsys->entities[j].destination && ((jsys->entities[j].seq_id != src->seq_id && jsys->entities[j].seq_id != dst->seq_id))) continue;
 
-                    update_administration(ent, &jsys->entities[j], 60 * (distance + 1), JUMP);
+                    update_administration(ent, &jsys->entities[j], distance, JUMP);
                 }
             }
         }
@@ -214,7 +220,27 @@ void Dijkstra::solve_j_set(Celestial *ent) {
 }
 
 void Dijkstra::update_administration(Celestial *src, Celestial *dst, float ccost, enum movement_type ctype) {
-    float cur_cost = cost[src->seq_id] + ccost;
+    float dcost, cur_cost;
+
+    if (ctype == JUMP) {
+        if (parameters->fatigue_model == FATIGUE_IGNORE) {
+            dcost = 10.0;
+        } else if (parameters->fatigue_model == FATIGUE_REACTIVATION_COST) {
+            dcost = 60 * (ccost + 1);
+        } else if (parameters->fatigue_model == FATIGUE_FATIGUE_COST) {
+            dcost = 600 * ccost;
+        } else if (parameters->fatigue_model == FATIGUE_REACTIVATION_COUNTDOWN) {
+            dcost = reactivation[src->seq_id] + 10.0;
+        } else if (parameters->fatigue_model == FATIGUE_FATIGUE_COUNTDOWN) {
+            dcost = fatigue[src->seq_id] + 10.0;
+        } else {
+            dcost = INFINITY;
+        }
+    } else {
+        dcost = ccost;
+    }
+
+    cur_cost = cost[src->seq_id] + dcost;
 
     if (cur_cost <= cost[dst->seq_id] && !vist[dst->seq_id]) {
         #pragma omp critical
@@ -223,6 +249,14 @@ void Dijkstra::update_administration(Celestial *src, Celestial *dst, float ccost
             prev[dst->seq_id] = src->seq_id;
             cost[dst->seq_id] = cur_cost;
             type[dst->seq_id] = ctype;
+
+            fatigue[dst->seq_id] = std::max(fatigue[src->seq_id] - dcost, 0.f);
+            reactivation[dst->seq_id] = std::max(reactivation[src->seq_id] - dcost, 0.f);
+
+            if (ctype == JUMP) {
+                fatigue[dst->seq_id] = std::min(60*60*24*7.f, std::max(fatigue[src->seq_id], 600.f) * (ccost + 1));
+                reactivation[dst->seq_id] = std::max(fatigue[src->seq_id] / 600, 60 * (ccost + 1));
+            }
         }
     }
 }
