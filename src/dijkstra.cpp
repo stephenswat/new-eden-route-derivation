@@ -27,32 +27,6 @@ typedef __m128 vector_type;
 #error "Here's a nickel kid, buy yourself a real computer."
 #endif
 
-#define DEBUG_PRINTS 0
-
-enum measurement_point {
-    MB_TOTAL_START, MB_TOTAL_END,
-    MB_INIT_START, MB_INIT_END,
-    MB_SYSTEM_START, MB_SYSTEM_END,
-    MB_GATE_START, MB_GATE_END,
-    MB_JUMP_START, MB_JUMP_END,
-    MB_SELECT_START, MB_SELECT_END,
-    MB_MAX
-};
-
-#if DEBUG_PRINTS == 1
-static struct timespec mbt[MB_MAX];
-static long mba[MB_MAX] = {0};
-#endif
-
-static void update_timers(enum measurement_point p) {
-    #if DEBUG_PRINTS == 1
-    clock_gettime(CLOCK_MONOTONIC, &mbt[p]);
-    if (p % 2 == 1) {
-        mba[p] += time_diff(&mbt[p - 1], &mbt[p]);
-    }
-    #endif
-}
-
 inline float __attribute__((always_inline)) entity_distance(Celestial *a, Celestial *b) {
     if (a->system != b->system) return INFINITY;
 
@@ -298,37 +272,24 @@ std::map<Celestial *, float> *Dijkstra::get_all_distances() {
 }
 
 void Dijkstra::solve_internal() {
-    update_timers(MB_TOTAL_START);
-    update_timers(MB_INIT_START);
-
     int tmp = -1;
     int remaining = this->universe.entity_count;
 
     Celestial *ent;
 
-    update_timers(MB_INIT_END);
-
     #pragma omp parallel num_threads(3)
     while (remaining > 0 && (!dst || !vist[dst->seq_id]) && (tmp == -1 || !isinf(cost[tmp]))) {
         #pragma omp master
         {
-            update_timers(MB_SELECT_START);
             tmp = queue->extract();
             ent = &this->universe.entities[tmp];
             vist[tmp] = 1;
-            update_timers(MB_SELECT_END);
 
-            update_timers(MB_SYSTEM_START);
             solve_w_set(ent);
-            update_timers(MB_SYSTEM_END);
 
-            update_timers(MB_GATE_START);
             solve_g_set(ent);
-            update_timers(MB_GATE_END);
 
             solve_r_set(ent);
-
-            update_timers(MB_JUMP_START);
         }
 
         #pragma omp barrier
@@ -337,13 +298,10 @@ void Dijkstra::solve_internal() {
 
         #pragma omp master
         {
-            update_timers(MB_JUMP_END);
             remaining--;
             loops++;
         }
 
         #pragma omp barrier
     }
-
-    update_timers(MB_TOTAL_END);
 }
