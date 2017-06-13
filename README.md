@@ -7,8 +7,7 @@ To run the program, first download and unpack the required data files:
 
     wget https://www.fuzzwork.co.uk/dump/latest/mapDenormalize.csv.bz2
     wget https://www.fuzzwork.co.uk/dump/latest/mapJumps.csv.bz2
-    bunzip2 mapDenormalize.csv.bz2
-    bunzip2 mapJumps.csv.bz2
+    bunzip2 mapDenormalize.csv.bz2 mapJumps.csv.bz2
 
 Then compile the program:
 
@@ -24,5 +23,7 @@ Finally, run the program:
 Alternatively, in Python:
 
     import eve_nerd
-    u = eve_nerd.Universe("../mapDenormalize.csv", "../mapJumps.csv")
+    u = eve_nerd.Universe("mapDenormalize.csv", "mapJumps.csv")
     b = u.route(40004334, 40348191, eve_nerd.BATTLECRUISER)
+
+Make sure the build directory is in the `PYTHONPATH` environment variable.

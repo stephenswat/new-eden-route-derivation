@@ -1,4 +1,4 @@
-import build.eve_nerd as eve_nerd
+import eve_nerd
 
 def print_route(v):
     print((" %s to %s " % (v.points[0].entity.system.name, v.points[-1].entity.system.name)).center(80, "-"))
