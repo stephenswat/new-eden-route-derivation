@@ -9,7 +9,6 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
-#include "main.hpp"
 #include "universe.hpp"
 #include "dijkstra.hpp"
 
@@ -92,7 +91,7 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
             parameters.gate_cost = atof(arg);
             break;
         case 3000:
-            fprintf(stderr, "NERD-" VERSION "\n");
+            fprintf(stderr, "NERD-0.0.15\n");
             exit(0);
             break;
         case ARGP_KEY_ARG:
