@@ -232,8 +232,8 @@ void Universe::load_stargates(FILE *f) {
 }
 
 void Universe::initialise(FILE *entities, FILE *gates) {
-    this->entities = (Celestial *) calloc(500000, sizeof(Celestial));
-    this->systems = (System *) calloc(9000, sizeof(System));
+    this->entities = new Celestial[500000];
+    this->systems = new System[9000];
 
     this->last_entity = this->entities;
 
@@ -256,16 +256,6 @@ Universe::Universe(FILE *entities, FILE *gates) {
 }
 
 Universe::~Universe() {
-    for (int i = 0; i < this->entity_count; i++) {
-        this->entities[i].name.clear();
-        this->entities[i].name.shrink_to_fit();
-    }
-
-    for (int i = 0; i < this->system_count; i++) {
-        this->systems[i].name.clear();
-        this->systems[i].name.shrink_to_fit();
-    }
-
-    free(this->entities);
-    free(this->systems);
+    delete[] this->entities;
+    delete[] this->systems;
 }

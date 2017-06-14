@@ -75,23 +75,21 @@ Dijkstra::Dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *para
     this->dst = dst;
     this->parameters = parameters;
 
-    this->prev = (int *) malloc(this->universe.entity_count * sizeof(int));
-    this->vist = (int *) malloc(this->universe.entity_count * sizeof(int));
-    this->cost = (float *) malloc(this->universe.entity_count * sizeof(float));
-    this->type = (enum movement_type *) malloc(this->universe.entity_count * sizeof(enum movement_type));
+    this->prev = new int[this->universe.entity_count];
+    this->vist = new int[this->universe.entity_count];
+    this->cost = new float[this->universe.entity_count];
+    this->type = new enum movement_type[this->universe.entity_count];
 
-    this->sys_c = (float *) calloc(4 * (this->universe.system_count + VECTOR_WIDTH), sizeof(float));
-    this->sys_x = (float *) calloc((this->universe.system_count + VECTOR_WIDTH), sizeof(float));
-    this->sys_y = (float *) calloc((this->universe.system_count + VECTOR_WIDTH), sizeof(float));
-    this->sys_z = (float *) calloc((this->universe.system_count + VECTOR_WIDTH), sizeof(float));
+    this->sys_x = new float[this->universe.system_count + VECTOR_WIDTH];
+    this->sys_y = new float[this->universe.system_count + VECTOR_WIDTH];
+    this->sys_z = new float[this->universe.system_count + VECTOR_WIDTH];
 
-    this->fatigue = (float *) calloc(this->universe.entity_count, sizeof(float));
-    this->reactivation = (float *) calloc(this->universe.entity_count, sizeof(float));
+    this->fatigue = new float[this->universe.entity_count];
+    this->reactivation = new float[this->universe.entity_count];
 
     this->queue = new MinHeap<float, int>(u.entity_count);
 
     for (int i = 0; i < this->universe.system_count; i++) {
-        _mm_store_ps(&sys_c[i * 4], this->universe.systems[i].pos);
         sys_x[i] = this->universe.systems[i].pos[0];
         sys_y[i] = this->universe.systems[i].pos[1];
         sys_z[i] = this->universe.systems[i].pos[2];
@@ -113,15 +111,14 @@ Dijkstra::Dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *para
 }
 
 Dijkstra::~Dijkstra() {
-    free(prev);
-    free(cost);
-    free(vist);
-    free(type);
+    delete[] prev;
+    delete[] cost;
+    delete[] vist;
+    delete[] type;
 
-    free(sys_c);
-    free(sys_x);
-    free(sys_y);
-    free(sys_z);
+    delete[] sys_x;
+    delete[] sys_y;
+    delete[] sys_z;
 }
 
 bool Dijkstra::celestial_is_relevant(Celestial &c) {

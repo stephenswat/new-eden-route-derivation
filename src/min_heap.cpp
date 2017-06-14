@@ -12,8 +12,8 @@
 template <class P, class V> MinHeap<P, V>::MinHeap(int size) {
     this->length = size;
     this->occupied = 0;
-    this->map = (int *) calloc(size, sizeof(int));
-    this->array = (MinHeapElement<P, V> *) calloc(size, sizeof(MinHeapElement<P, V>));
+    this->map = new int[size];
+    this->array = new MinHeapElement<P, V>[size];
 
     for (int i = 0; i < size; i++) {
         this->map[i] = -1;
@@ -21,8 +21,8 @@ template <class P, class V> MinHeap<P, V>::MinHeap(int size) {
 }
 
 template <class P, class V> MinHeap<P, V>::~MinHeap() {
-    free(this->map);
-    free(this->array);
+    delete[] this->map;
+    delete[] this->array;
 }
 
 template <class P, class V> bool MinHeap<P, V>::is_empty() {
