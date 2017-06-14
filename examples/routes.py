@@ -5,7 +5,7 @@ def print_route(v):
     t = int(v.cost)
     print("Estimated travel time: %d:%02d:%02d" % (t / 3600, (t % 3600) / 60, t % 60))
 
-    for x in v:
+    for x in v.points:
         if x.type == eve_nerd.JUMP:
             print("Jump to %s in %s" % (x.entity.name, x.entity.system.name))
         elif x.type == eve_nerd.GATE:

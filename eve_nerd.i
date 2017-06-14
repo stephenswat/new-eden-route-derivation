@@ -5,6 +5,14 @@
 %{
 #include "universe.hpp"
 #include "parameters.hpp"
+
+namespace swig {
+    template <typename T> swig_type_info *type_info();
+
+    template <> swig_type_info *type_info<waypoint>() {
+        return SWIGTYPE_p_waypoint;
+    };
+}
 %}
 
 %include <std_string.i>
@@ -24,10 +32,6 @@
     @property
     def end(self):
         return self.points[-1].entity
-
-    def __iter__(self):
-        for x in range(len(self.points)):
-            yield self.points[x]
 
     def __repr__(self):
         return "<Route '%s' to '%s'>" % (self.start.name, self.end.name)
