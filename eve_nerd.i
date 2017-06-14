@@ -14,3 +14,11 @@
 %include "parameters.hpp"
 
 %template(WaypointList) std::list<struct waypoint>;
+
+%extend Route {
+%pythoncode {
+    def __iter__(self):
+        for x in range(len(self.points)):
+            yield self.points[x]
+}
+}

@@ -5,17 +5,15 @@ def print_route(v):
     t = int(v.cost)
     print("Estimated travel time: %d:%02d:%02d" % (t / 3600, (t % 3600) / 60, t % 60))
 
-    for x in range(len(v.points)):
-        r = v.points[x]
-
-        if r.type == eve_nerd.JUMP:
-            print("Jump to %s in %s" % (r.entity.name, r.entity.system.name))
-        elif r.type == eve_nerd.GATE:
-            print("Gate into %s" % (r.entity.system.name))
-        elif r.type == eve_nerd.WARP:
-            print("Warp to %s" % (r.entity.name))
-        elif r.type == eve_nerd.STRT:
-            print("Start at %s in %s" % (r.entity.name, r.entity.system.name))
+    for x in v:
+        if x.type == eve_nerd.JUMP:
+            print("Jump to %s in %s" % (x.entity.name, x.entity.system.name))
+        elif x.type == eve_nerd.GATE:
+            print("Gate into %s" % (x.entity.system.name))
+        elif x.type == eve_nerd.WARP:
+            print("Warp to %s" % (x.entity.name))
+        elif x.type == eve_nerd.STRT:
+            print("Start at %s in %s" % (x.entity.name, x.entity.system.name))
 
     print("")
 
