@@ -96,7 +96,6 @@ Dijkstra::Dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *para
     }
 
     for (int i = 0; i < this->universe.entity_count; i++) {
-        if (!celestial_is_relevant(this->universe.entities[i])) continue;
 
         vist[i] = i == src->seq_id ? 1 : 0;
         prev[i] = i == src->seq_id ? -2 : -1;
@@ -106,7 +105,9 @@ Dijkstra::Dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *para
         fatigue[i] = 0.0;
         reactivation[i] = 0.0;
 
-        queue->insert(cost[i], i);
+        if (celestial_is_relevant(this->universe.entities[i])) {
+            queue->insert(cost[i], i);
+        }
     }
 }
 
@@ -277,6 +278,12 @@ std::map<Celestial *, float> *Dijkstra::get_all_distances() {
     std::map<Celestial *, float> *res = new std::map<Celestial *, float>();
 
     if (dst != NULL) throw 10;
+
+    for (int i = 0; i < universe.entity_count; i++) {
+        if (isfinite(cost[i])) {
+            res->emplace(&universe.entities[i], cost[i]);
+        }
+    }
 
     return res;
 }

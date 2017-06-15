@@ -5,15 +5,25 @@
 %{
 #include "universe.hpp"
 #include "parameters.hpp"
+
+namespace swig {
+    template <typename T> swig_type_info *type_info();
+
+    template <> swig_type_info *type_info<Celestial>() {
+        return SWIGTYPE_p_Celestial;
+    };
+}
 %}
 
 %include <std_string.i>
 %include <std_list.i>
+%include <std_map.i>
 
 %include "universe.hpp"
 %include "parameters.hpp"
 
 %template(WaypointList) std::list<waypoint>;
+%template(DistanceMap) std::map<Celestial *, float>;
 
 %extend Route {
 %pythoncode {
