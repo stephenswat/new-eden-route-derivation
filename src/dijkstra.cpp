@@ -30,17 +30,17 @@ typedef __m128 vector_type;
 inline float __attribute__((always_inline)) entity_distance(Celestial *a, Celestial *b) {
     if (a->system != b->system) return INFINITY;
 
-    float dx = a->pos[0] - b->pos[0];
-    float dy = a->pos[1] - b->pos[1];
-    float dz = a->pos[2] - b->pos[2];
+    float dx = a->x - b->x;
+    float dy = a->y - b->y;
+    float dz = a->z - b->z;
 
     return sqrt(dx * dx + dy * dy + dz * dz);
 }
 
 inline float __attribute__((always_inline)) system_distance(System *a, System *b) {
-    float dx = a->pos[0] - b->pos[0];
-    float dy = a->pos[1] - b->pos[1];
-    float dz = a->pos[2] - b->pos[2];
+    float dx = a->x - b->x;
+    float dy = a->y - b->y;
+    float dz = a->z - b->z;
 
     return sqrt(dx * dx + dy * dy + dz * dz);
 }
@@ -90,9 +90,9 @@ Dijkstra::Dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *para
     this->queue = new MinHeap<float, int>(u.entity_count);
 
     for (int i = 0; i < this->universe.system_count; i++) {
-        sys_x[i] = this->universe.systems[i].pos[0];
-        sys_y[i] = this->universe.systems[i].pos[1];
-        sys_z[i] = this->universe.systems[i].pos[2];
+        sys_x[i] = this->universe.systems[i].x;
+        sys_y[i] = this->universe.systems[i].y;
+        sys_z[i] = this->universe.systems[i].z;
     }
 
     for (int i = 0; i < this->universe.entity_count; i++) {
@@ -160,13 +160,13 @@ void Dijkstra::solve_j_set(Celestial *ent) {
     float range, range_sq;
 
     #if VECTOR_WIDTH == 4
-    x_src_vec = _mm_set1_ps(sys->pos[0]);
-    y_src_vec = _mm_set1_ps(sys->pos[1]);
-    z_src_vec = _mm_set1_ps(sys->pos[2]);
+    x_src_vec = _mm_set1_ps(sys->x);
+    y_src_vec = _mm_set1_ps(sys->y);
+    z_src_vec = _mm_set1_ps(sys->z);
     #elif VECTOR_WIDTH == 8
-    x_src_vec = _mm256_set1_ps(sys->pos[0]);
-    y_src_vec = _mm256_set1_ps(sys->pos[1]);
-    z_src_vec = _mm256_set1_ps(sys->pos[2]);
+    x_src_vec = _mm256_set1_ps(sys->x);
+    y_src_vec = _mm256_set1_ps(sys->y);
+    z_src_vec = _mm256_set1_ps(sys->z);
     #endif
 
     if (!isnan((range = parameters->jump_range)) || !isnan((range = ent->jump_range))) {

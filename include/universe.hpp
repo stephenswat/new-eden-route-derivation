@@ -34,7 +34,7 @@ public:
 
 class Entity {
 public:
-    __m128 pos;
+    float x, y, z, _b;
     int id, seq_id;
     std::string name;
 };

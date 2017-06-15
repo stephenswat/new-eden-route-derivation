@@ -67,4 +67,4 @@ static const Parameters SUPERCARRIER = Parameters(1.5, 40.0, -1.0, 6.0);
 static const Parameters TITAN = Parameters(1.37, 60.0, -1.0, 6.0);
 
 static const Parameters RORQUAL = Parameters(1.5, 50.0, -1.0, 10.0, 0.9);
-static const Parameters JUMP_FREIGHTER = Parameters(1.5, 40.0, -1.0, 10.0, 0.9);
+static const Parameters JUMP_FREIGHTER = Parameters(1.5, 40.0, 10.0, 10.0, 0.9);
