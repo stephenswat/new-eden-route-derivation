@@ -5,14 +5,6 @@
 %{
 #include "universe.hpp"
 #include "parameters.hpp"
-
-namespace swig {
-    template <typename T> swig_type_info *type_info();
-
-    template <> swig_type_info *type_info<waypoint>() {
-        return SWIGTYPE_p_waypoint;
-    };
-}
 %}
 
 %include <std_string.i>
@@ -21,7 +13,7 @@ namespace swig {
 %include "universe.hpp"
 %include "parameters.hpp"
 
-%template(WaypointList) std::list<struct waypoint>;
+%template(WaypointList) std::list<waypoint>;
 
 %extend Route {
 %pythoncode {
