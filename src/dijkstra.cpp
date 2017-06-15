@@ -292,7 +292,7 @@ void Dijkstra::solve_internal() {
     int tmp = -1;
     Celestial *ent;
 
-    #pragma omp parallel num_threads(3)
+    #pragma omp parallel num_threads(1)
     while (!queue->is_empty() && (!dst || !vist[dst->seq_id]) && (tmp == -1 || !isinf(cost[tmp]))) {
         #pragma omp master
         {
