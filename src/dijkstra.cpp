@@ -45,18 +45,17 @@ inline float __attribute__((always_inline)) system_distance(System *a, System *b
     return sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-double get_time(double distance, double v_wrp) {
-    double k_accel = v_wrp;
-    double k_decel = (v_wrp / 3) < 2 ? (v_wrp / 3) : 2;
+float Dijkstra::get_time(float distance) {
+    float v_wrp = parameters->warp_speed;
 
-    double v_max_wrp = v_wrp * AU_TO_M;
+    float k_accel = v_wrp;
+    float k_decel = (v_wrp / 3) < 2 ? (v_wrp / 3) : 2;
 
-    double d_accel = AU_TO_M;
-    double d_decel = v_max_wrp / k_decel;
+    float v_max_wrp = v_wrp * AU_TO_M;
 
-    double d_min = d_accel + d_decel;
+    float d_min = AU_TO_M + v_max_wrp / k_decel;
 
-    double cruise_time = 0;
+    float cruise_time = 0;
 
     if (d_min > distance) {
         v_max_wrp = distance * k_accel * k_decel / (k_accel + k_decel);
@@ -64,8 +63,8 @@ double get_time(double distance, double v_wrp) {
         cruise_time = (distance - d_min) / v_max_wrp;
     }
 
-    double t_accel = log(v_max_wrp / k_accel) / k_accel;
-    double t_decel = log(v_max_wrp / 100) / k_decel;
+    float t_accel = log(v_max_wrp / k_accel) / k_accel;
+    float t_decel = log(v_max_wrp / 100) / k_decel;
 
     return cruise_time + t_accel + t_decel;
 }
@@ -134,7 +133,7 @@ void Dijkstra::solve_w_set(Celestial *ent) {
             continue;
         }
 
-        update_administration(ent, &sys->entities[i], parameters->align_time + get_time(entity_distance(ent, &sys->entities[i]), parameters->warp_speed), WARP);
+        update_administration(ent, &sys->entities[i], parameters->align_time + get_time(entity_distance(ent, &sys->entities[i])), WARP);
     }
 }
 

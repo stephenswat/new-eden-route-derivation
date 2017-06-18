@@ -19,6 +19,8 @@ private:
     void solve_r_set(Celestial *);
     void solve_internal();
 
+    float get_time(float);
+
     bool celestial_is_relevant(Celestial &);
 
     void update_administration(Celestial *, Celestial *, float, enum movement_type);
