@@ -139,7 +139,7 @@ void Dijkstra::solve_w_set(Celestial *ent) {
 }
 
 void Dijkstra::solve_g_set(Celestial *ent) {
-    if (ent->destination && parameters->gate_cost >= 0.0) {
+    if (ent->destination && !isnan(parameters->gate_cost)) {
         update_administration(ent, ent->destination, parameters->gate_cost, GATE);
     }
 }
