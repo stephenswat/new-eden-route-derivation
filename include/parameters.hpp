@@ -48,7 +48,12 @@ public:
         this->gate_cost = g;
     }
 
-    float jump_range = NAN, warp_speed, align_time = 0.0, gate_cost, jump_range_reduction = 0.0;
+    Parameters(float w, float a) {
+        this->warp_speed = w;
+        this->align_time = a;
+    }
+
+    float jump_range = NAN, warp_speed, align_time = 0.0, gate_cost = 14.0, jump_range_reduction = 0.0;
     enum fatigue_model fatigue_model = FATIGUE_REACTIVATION_COUNTDOWN;
 };
 

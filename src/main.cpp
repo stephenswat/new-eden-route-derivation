@@ -29,7 +29,7 @@ static struct timespec timer_start, timer_end;
 
 static char args_doc[] = "mapDenormalized mapJumps";
 
-static Parameters parameters(3.0, 5.0, 10.0, NAN);
+static Parameters parameters(3.0, 5.0);
 
 static struct argp_option options[] = {
     {"quiet", 'q', 0, 0, "Don't produce any output", 0 },
