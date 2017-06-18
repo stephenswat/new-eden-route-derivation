@@ -102,7 +102,6 @@ void Universe::add_system(int id, char *name, double x, double y, double z, unsi
     s->x = x;
     s->y = y;
     s->z = z;
-    s->_b = 0.0;
 
     s->security = security;
 
@@ -139,7 +138,6 @@ Celestial *Universe::add_entity(int system, int id, enum entity_type type, char 
     e->x = x;
     e->y = y;
     e->z = z;
-    e->_b = 0.0;
 
     e->system = s;
     e->jump_range = NAN;
