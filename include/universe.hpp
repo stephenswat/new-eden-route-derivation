@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <list>
 #include <map>
 #include <xmmintrin.h>
@@ -30,6 +31,11 @@ public:
     int loops;
     double cost;
     std::list<struct waypoint> points;
+
+    void concatenate(const Route& that) {
+        cost += that.cost;
+        points.insert(points.end(), that.points.begin(), that.points.end());
+    }
 };
 
 class Entity {
@@ -75,8 +81,13 @@ public:
     void add_static_bridge(Celestial *, Celestial *);
     void add_static_bridge(int, int);
 
+    #ifndef SWIG
     Route *get_route(int, int, Parameters *);
     Route *get_route(Celestial &, Celestial &, Parameters *);
+    Route *get_route(std::vector<Celestial *>, Parameters *);
+    #endif
+
+    Route *get_route(std::vector<int>, Parameters *);
 
     std::map<Celestial *, float> *get_all_distances(int, Parameters *);
     std::map<Celestial *, float> *get_all_distances(Celestial &, Parameters *);

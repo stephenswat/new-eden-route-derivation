@@ -17,13 +17,16 @@ namespace swig {
 
 %include <std_string.i>
 %include <std_list.i>
+%include <std_vector.i>
 %include <std_map.i>
-
-%include "universe.hpp"
-%include "parameters.hpp"
 
 %template(WaypointList) std::list<waypoint>;
 %template(DistanceMap) std::map<Celestial *, float>;
+%template(CelestialVector) std::vector<Celestial *>;
+%template(IntVector) std::vector<int>;
+
+%include "universe.hpp"
+%include "parameters.hpp"
 
 %extend Route {
 %pythoncode {

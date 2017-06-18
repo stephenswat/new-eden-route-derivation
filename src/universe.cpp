@@ -7,8 +7,6 @@
 #include "universe.hpp"
 #include "dijkstra.hpp"
 
-using namespace std;
-
 System *Universe::get_system(int id) {
     return this->systems + this->system_map[id];
 }
@@ -49,6 +47,32 @@ Route *Universe::get_route(int src_id, int dst_id, Parameters *param) {
 
 Route *Universe::get_route(Celestial &src, Celestial &dst, Parameters *param) {
     return Dijkstra(*this, &src, &dst, param).get_route();
+}
+
+Route *Universe::get_route(std::vector<int> points, Parameters *param) {
+    std::vector<Celestial *> as_celestials = std::vector<Celestial *>();
+
+    for (auto const& value : points) {
+        as_celestials.push_back(get_entity_or_default(value));
+    }
+
+    return get_route(as_celestials, param);
+}
+
+Route *Universe::get_route(std::vector<Celestial *> points, Parameters *param) {
+    Route *res = NULL, *tmp;
+
+    for(unsigned int i = 0; i != points.size() - 1; i++) {
+        tmp = get_route(*points[i], *points[i + 1], param);
+
+        if (res == NULL) {
+            res = tmp;
+        } else {
+            res->concatenate(*tmp);
+        }
+    }
+
+    return res;
 }
 
 std::map<Celestial *, float> *Universe::get_all_distances(int src_id, Parameters *param) {

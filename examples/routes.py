@@ -21,26 +21,26 @@ def print_route(v):
 a = eve_nerd.Universe("mapDenormalize.csv", "mapJumps.csv")
 
 # Go from D-P to G-M using a supercarrier preset
-b = a.get_route(30003135, 30004696, eve_nerd.SUPERCARRIER)
+b = a.get_route([30003135, 30004696], eve_nerd.SUPERCARRIER)
 print_route(b)
 
 # Go from D-P to Period Basis using a Black Ops
-b = a.get_route(30003135, 30004955, eve_nerd.BLACK_OPS)
+b = a.get_route([30003135, 30004955], eve_nerd.BLACK_OPS)
 print_route(b)
 
-b = a.get_route(30003135, 30003632, eve_nerd.CARRIER)
+b = a.get_route([30003135, 30003632], eve_nerd.CARRIER)
 print_route(b)
 
 a.add_dynamic_bridge(40199046, 6.0)
 
-b = a.get_route(30003135, 30004955, eve_nerd.BATTLECRUISER)
+b = a.get_route([30003135, 30004955], eve_nerd.BATTLECRUISER)
 print_route(b)
 
 a.add_static_bridge(40297263, 40297596)
 
-b = a.get_route(30003135, 30004704, eve_nerd.BATTLECRUISER)
+b = a.get_route([30003135, 30004704], eve_nerd.BATTLECRUISER)
 print_route(b)
 
 c = eve_nerd.Parameters(8.0, 1.5, 10.0)
-b = a.get_route(30003135, 30004704, c)
+b = a.get_route([30003135, 30004704, 30003181], c)
 print_route(b)
