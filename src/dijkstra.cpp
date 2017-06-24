@@ -241,7 +241,7 @@ void Dijkstra::update_administration(Celestial *a, Celestial *b, float ccost, en
 
             if (ctype == JUMP) {
                 fatigue[b->seq_id] = std::min(60*60*24*7.f, std::max(fatigue[a->seq_id], 600.f) * (ccost + 1));
-                reactivation[b->seq_id] = std::max(fatigue[a->seq_id] / 600, 60 * (ccost + 1));
+                reactivation[b->seq_id] = std::max(fatigue[a->seq_id] / 10, 60 * (ccost + 1));
             }
         }
     }
