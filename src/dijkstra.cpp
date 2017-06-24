@@ -259,14 +259,14 @@ void Dijkstra::update_administration(Celestial *a, Celestial *b, float ccost, en
 }
 
 Route *Dijkstra::get_route() {
-    if (!dst) throw 20;
+    if (!dst) return NULL;
     return get_route(dst);
 }
 
 Route *Dijkstra::get_route(Celestial *dst) {
     solve_internal();
 
-    if (!vist[dst->seq_id]) throw 21;
+    if (!vist[dst->seq_id]) return NULL;
 
     Route *route = new Route();
 
