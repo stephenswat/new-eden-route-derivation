@@ -40,7 +40,7 @@ public:
     }
 
     float jump_range = NAN, warp_speed, align_time, gate_cost, jump_range_reduction;
-    enum fatigue_model fatigue_model = FATIGUE_REACTIVATION_COUNTDOWN;
+    enum fatigue_model fatigue_model = FATIGUE_FATIGUE_COUNTDOWN;
 };
 
 static const Parameters FRIGATE = Parameters(5.0, 3.0);

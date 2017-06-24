@@ -85,6 +85,8 @@ Dijkstra::Dijkstra(Universe &u, Celestial *src, Celestial *dst, Parameters *para
 
     this->fatigue = new float[this->universe.entity_count];
     this->reactivation = new float[this->universe.entity_count];
+    this->wait = new float[this->universe.entity_count];
+    this->distance = new float[this->universe.entity_count];
 
     this->queue = new MinHeap<float, int>(u.entity_count);
 
@@ -115,6 +117,9 @@ Dijkstra::~Dijkstra() {
     delete[] cost;
     delete[] vist;
     delete[] type;
+
+    delete[] wait;
+    delete[] distance;
 
     delete[] sys_x;
     delete[] sys_y;
@@ -206,7 +211,7 @@ void Dijkstra::solve_j_set(Celestial *ent) {
 }
 
 void Dijkstra::update_administration(Celestial *a, Celestial *b, float ccost, enum movement_type ctype) {
-    float dcost, cur_cost;
+    float dcost, cur_cost, wait_cost = 0.0;
 
     if (ctype == JUMP) {
         if (parameters->fatigue_model == FATIGUE_IGNORE) {
@@ -216,9 +221,11 @@ void Dijkstra::update_administration(Celestial *a, Celestial *b, float ccost, en
         } else if (parameters->fatigue_model == FATIGUE_FATIGUE_COST) {
             dcost = 600 * ccost;
         } else if (parameters->fatigue_model == FATIGUE_REACTIVATION_COUNTDOWN) {
-            dcost = reactivation[a->seq_id] + 10.0;
+            wait_cost = reactivation[a->seq_id];
+            dcost = wait_cost + 10.0;
         } else if (parameters->fatigue_model == FATIGUE_FATIGUE_COUNTDOWN) {
-            dcost = fatigue[a->seq_id] + 10.0;
+            wait_cost = std::max(fatigue[a->seq_id] - 600, 0.f);
+            dcost = wait_cost + 10.0;
         } else {
             dcost = INFINITY;
         }
@@ -235,13 +242,17 @@ void Dijkstra::update_administration(Celestial *a, Celestial *b, float ccost, en
             prev[b->seq_id] = a->seq_id;
             cost[b->seq_id] = cur_cost;
             type[b->seq_id] = ctype;
+            wait[b->seq_id] = wait_cost;
 
             fatigue[b->seq_id] = std::max(fatigue[a->seq_id] - dcost, 0.f);
             reactivation[b->seq_id] = std::max(reactivation[a->seq_id] - dcost, 0.f);
 
             if (ctype == JUMP) {
-                fatigue[b->seq_id] = std::min(60*60*24*7.f, std::max(fatigue[a->seq_id], 600.f) * (ccost + 1));
-                reactivation[b->seq_id] = std::max(fatigue[a->seq_id] / 10, 60 * (ccost + 1));
+                fatigue[b->seq_id] = std::min(60*60*24*7.f, std::max((fatigue[a->seq_id] - wait_cost), 600.f) * (ccost + 1));
+                reactivation[b->seq_id] = std::max((fatigue[a->seq_id] - wait_cost) / 10, 60 * (ccost + 1));
+                distance[b->seq_id] = ccost;
+            } else {
+                distance[b->seq_id] = NAN;
             }
         }
     }
@@ -269,6 +280,8 @@ Route *Dijkstra::get_route(Celestial *dst) {
             .time = cost[c],
             .fatigue = fatigue[c],
             .reactivation = reactivation[c],
+            .wait = wait[c],
+            .distance = distance[c],
         });
     }
 

@@ -24,7 +24,7 @@ static std::string movement_type_str[4] = { [JUMP] = "JUMP", [GATE] = "GATE", [W
 struct waypoint {
     Celestial *entity;
     enum movement_type type;
-    float time, fatigue, reactivation;
+    float time, fatigue, reactivation, wait, distance;
 };
 
 class Route {
