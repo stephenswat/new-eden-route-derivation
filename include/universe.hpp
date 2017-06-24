@@ -95,6 +95,10 @@ public:
 
     Celestial *get_entity(int);
     System *get_system(int);
+
+    Celestial *get_entity_by_seq_id(int);
+    System *get_system_by_seq_id(int);
+
     Celestial *get_entity_or_default(int);
 
     int system_count = 0, entity_count = 0, stargate_count = 0;

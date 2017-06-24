@@ -15,6 +15,14 @@ Celestial *Universe::get_entity(int id) {
     return this->entities + this->entity_map[id];
 }
 
+System *Universe::get_system_by_seq_id(int id) {
+    return this->systems + id;
+}
+
+Celestial *Universe::get_entity_by_seq_id(int id) {
+    return this->entities + id;
+}
+
 Celestial *Universe::get_entity_or_default(int id) {
     System *sys;
     Celestial *ent = NULL;
