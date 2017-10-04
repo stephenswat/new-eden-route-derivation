@@ -58,6 +58,14 @@ public:
     bool is_relevant() {
         return this->destination || this->bridge || !isnan(this->jump_range);
     }
+
+    double get_distance(Celestial *b) {
+        float dx = this->x - b->x;
+        float dy = this->y - b->y;
+        float dz = this->z - b->z;
+
+        return sqrt(dx * dx + dy * dy + dz * dz);
+    }
 };
 
 class System: public Entity {
@@ -65,6 +73,10 @@ public:
     int entity_count;
     Celestial *entities, *gates;
     float security;
+
+    Celestial *get_entity_by_internal_id(int id) {
+        return entities + id;
+    }
 };
 
 class Universe {

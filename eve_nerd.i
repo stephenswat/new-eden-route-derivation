@@ -43,8 +43,24 @@ namespace swig {
 }
 }
 
+%extend Universe {
+%pythoncode {
+    def get_systems(self):
+        for i in range(self.system_count):
+            yield self.get_system_by_seq_id(i)
+
+    def get_entities(self):
+        for i in range(self.entity_count):
+            yield self.get_entity_by_seq_id(i)
+}
+}
+
 %extend System {
 %pythoncode {
+    def get_entities(self):
+        for i in range(self.entity_count):
+            yield self.get_entity_by_internal_id(i)
+            
     def __str__(self):
         return self.name
 
