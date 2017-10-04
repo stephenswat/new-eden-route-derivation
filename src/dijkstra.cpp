@@ -1,4 +1,5 @@
 #include <array>
+#include <list>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -264,6 +265,8 @@ Route *Dijkstra::get_route() {
 }
 
 Route *Dijkstra::get_route(Celestial *dst) {
+    std::list<struct waypoint> points_tmp;
+
     solve_internal();
 
     if (!vist[dst->seq_id]) return NULL;
@@ -274,7 +277,7 @@ Route *Dijkstra::get_route(Celestial *dst) {
     route->cost = cost[dst->seq_id];
 
     for (int c = dst->seq_id; c != -2; c = prev[c]) {
-        route->points.push_front((struct waypoint) {
+        points_tmp.push_front((struct waypoint) {
             .entity = &this->universe.entities[c],
             .type = type[c],
             .time = cost[c],
@@ -285,10 +288,12 @@ Route *Dijkstra::get_route(Celestial *dst) {
         });
     }
 
+    for (auto i = points_tmp.begin(); i != points_tmp.end(); i++) {
+        route->points.push_back(*i);
+    }
+
     return route;
 }
-
-
 
 std::map<Celestial *, float> *Dijkstra::get_all_distances() {
     solve_internal();

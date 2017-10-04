@@ -2,7 +2,6 @@
 
 #include <string>
 #include <vector>
-#include <list>
 #include <map>
 #include <xmmintrin.h>
 
@@ -31,7 +30,7 @@ class Route {
 public:
     int loops;
     double cost;
-    std::list<struct waypoint> points;
+    std::vector<struct waypoint> points;
 
     void concatenate(const Route& that) {
         cost += that.cost;

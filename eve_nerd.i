@@ -16,11 +16,10 @@ namespace swig {
 %}
 
 %include <std_string.i>
-%include <std_list.i>
 %include <std_vector.i>
 %include <std_map.i>
 
-%template(WaypointList) std::list<waypoint>;
+%template(WaypointList) std::vector<waypoint>;
 %template(DistanceMap) std::map<Celestial *, float>;
 %template(CelestialVector) std::vector<Celestial *>;
 %template(IntVector) std::vector<int>;
@@ -60,7 +59,7 @@ namespace swig {
     def get_entities(self):
         for i in range(self.entity_count):
             yield self.get_entity_by_internal_id(i)
-            
+
     def __str__(self):
         return self.name
 
